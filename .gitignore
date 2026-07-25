@@ -1,0 +1,36 @@
+# 資料（原始 DRCD 與處理後 SFT jsonl 不入 git；SFT dataset 發佈走 HF）
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/processed/README.md
+
+# 私人筆記（檔名本身就會暴露「這是求職作品集」，沿用 tw-med-llm-qlora 的慣例）
+INTERVIEW_PREP.md
+interview.md
+interview-notes.md
+
+# 捨棄的實驗輸出（保留在本機，不入公開版）
+*.discarded-*
+
+# 模型與大檔（合併模型、GGUF 一律放 WSL2 ext4，不進 repo）
+*.gguf
+*.safetensors
+*.bin
+*.pt
+
+# 訓練與工具痕跡
+wandb/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# 憑證（HF token 只放 Colab Secrets / 環境變數）
+.env
+*.token
+
+# OS / 編輯器
+Thumbs.db
+.DS_Store
