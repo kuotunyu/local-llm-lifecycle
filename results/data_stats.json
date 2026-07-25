@@ -1,0 +1,136 @@
+{
+  "splits": {
+    "train": {
+      "n_articles": 1960,
+      "n_paragraphs": 8014,
+      "n_questions": 26936,
+      "expected_n_questions": 26936,
+      "matches_expected": true,
+      "context_char_length": {
+        "min": 166,
+        "mean": 435.8,
+        "median": 403.0,
+        "p90": 620,
+        "p95": 718,
+        "max": 1765
+      },
+      "question_char_length": {
+        "min": 4,
+        "mean": 21.1,
+        "median": 20.0,
+        "p90": 32,
+        "p95": 36,
+        "max": 222
+      },
+      "answer_char_length": {
+        "min": 1,
+        "mean": 4.9,
+        "median": 4.0,
+        "p90": 8,
+        "p95": 11,
+        "max": 118
+      }
+    },
+    "dev": {
+      "n_articles": 383,
+      "n_paragraphs": 1000,
+      "n_questions": 3524,
+      "expected_n_questions": 3524,
+      "matches_expected": true,
+      "context_char_length": {
+        "min": 240,
+        "mean": 448.7,
+        "median": 421.0,
+        "p90": 650,
+        "p95": 743,
+        "max": 1036
+      },
+      "question_char_length": {
+        "min": 7,
+        "mean": 23.1,
+        "median": 21.0,
+        "p90": 35,
+        "p95": 39,
+        "max": 73
+      },
+      "answer_char_length": {
+        "min": 1,
+        "mean": 5.0,
+        "median": 4.0,
+        "p90": 9,
+        "p95": 11,
+        "max": 45
+      }
+    },
+    "test": {
+      "n_articles": 378,
+      "n_paragraphs": 1000,
+      "n_questions": 3493,
+      "expected_n_questions": 3493,
+      "matches_expected": true,
+      "context_char_length": {
+        "min": 231,
+        "mean": 431.4,
+        "median": 407.5,
+        "p90": 610,
+        "p95": 709,
+        "max": 992
+      },
+      "question_char_length": {
+        "min": 6,
+        "mean": 23.0,
+        "median": 21,
+        "p90": 35,
+        "p95": 39,
+        "max": 59
+      },
+      "answer_char_length": {
+        "min": 1,
+        "mean": 5.0,
+        "median": 4.0,
+        "p90": 8,
+        "p95": 11,
+        "max": 46
+      }
+    }
+  },
+  "train_dev_leakage_check": {
+    "shared_article_count": 292,
+    "dev_paragraphs_under_shared_articles": 882,
+    "leaked_paragraph_count": 0,
+    "clean": true
+  },
+  "train_negative_synthesis": {
+    "requested": 2500,
+    "hard": 1648,
+    "easy": 852,
+    "false_negative_dropped": 122,
+    "fallback_hard_to_easy": 203,
+    "generated": 2500
+  },
+  "dev_negative_synthesis": {
+    "requested": 1175,
+    "hard": 712,
+    "easy": 463,
+    "false_negative_dropped": 54,
+    "fallback_hard_to_easy": 174,
+    "generated": 1175
+  },
+  "train_final_size": 10000,
+  "train_final_answerable": 7500,
+  "train_final_unanswerable": 2500,
+  "dev_answerable_size": 3524,
+  "dev_unanswerable_size": 1175,
+  "args": {
+    "seed": 42,
+    "train_size": 10000,
+    "unanswerable_ratio": 0.25,
+    "hard_negative_frac": 0.75,
+    "max_negative_retries": 5,
+    "sample_review_n": 20,
+    "force_download": false,
+    "skip_token_stats": true,
+    "push_to_hub": true,
+    "repo_id": "steven0226/drcd-zhtw-extractive-qa-sft"
+  }
+}
