@@ -1,0 +1,18 @@
+# 預設讓 git 自行判斷文字檔並在 repo 內正規化為 LF
+* text=auto
+
+# Shell script 一律 LF：本專案 Phase 4 的 GGUF 轉檔與量化在 WSL2 執行，
+# 若被 core.autocrlf 轉成 CRLF，shebang 會變成 `#!/usr/bin/env bash\r`，
+# 在 Linux 側報 "bad interpreter: ... ^M"，且錯誤訊息看不出真正原因。
+*.sh text eol=lf
+
+# Ollama 讀取的 Modelfile 同理，保持 LF
+deploy/Modelfile text eol=lf
+
+# 評估原始輸出與 notebook 皆為 JSON 系列，固定 LF 讓 diff 穩定
+*.jsonl text eol=lf
+*.json text eol=lf
+*.ipynb text eol=lf
+
+# 圖檔不做任何行尾轉換
+*.png binary
