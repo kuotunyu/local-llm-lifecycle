@@ -37,7 +37,7 @@ flowchart TB
     P3["Phase 3：全量訓練（Colab L4）<br>9,800 筆 × 2 epochs<br>→ LoRA adapter 推 HF private ckpt"]
     P4["Phase 4：本機轉檔鏈（WSL2 + 4090）<br>bf16 合併 → GGUF → 量化<br>五步 template 驗證 → Ollama/LM Studio 部署"]
     P5["Phase 5：評估（WSL2 + 4090）<br>五組對照 4,699 題 + TMMLU+ forgetting<br>→ EVAL_REPORT.md"]
-    P6["Phase 6：發佈<br>LoRA / GGUF / dataset 轉 public<br>README / PLAN / INTERVIEW_PREP 定稿"]
+    P6["Phase 6：發佈<br>LoRA / GGUF / dataset 轉 public<br>README / PLAN 定稿"]
     P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
 ```
 
@@ -115,7 +115,6 @@ tokenizer = AutoTokenizer.from_pretrained("steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA
 ```
 ├── PLAN.md              # 單一事實來源：藍圖 + 每 Phase 實作紀錄 + §7 設計理由/踩雷敘事（含圖解）
 ├── EVAL_REPORT.md         # 五組對照 + forgetting + 錯誤案例分析（含圖表）
-├── INTERVIEW_PREP.md      # 面試準備 Q&A
 ├── data/                 # DRCD 下載/負例合成/SFT jsonl 建置
 ├── notebooks/             # Colab QLoRA 訓練 notebook
 ├── scripts/               # 本機合併/轉檔/量化/驗證/評估/發佈腳本
@@ -123,9 +122,9 @@ tokenizer = AutoTokenizer.from_pretrained("steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA
 └── results/               # 評估輸出（json/csv/圖表）
 ```
 
-只有 4 份頂層文件，各自負責不重疊的內容：README（總覽/quickstart）、PLAN（完整過程：藍圖 →
-每 Phase 實作紀錄 → 設計理由與踩雷敘事，含所有 mermaid 圖解）、EVAL_REPORT（評估數字與圖表）、
-INTERVIEW_PREP（Q&A）。想先看圖再看文字，直接看 PLAN.md §7 跟本頁的 pipeline 圖。
+只有 3 份頂層文件，各自負責不重疊的內容：README（總覽/quickstart）、PLAN（完整過程：藍圖 →
+每 Phase 實作紀錄 → 設計理由與踩雷敘事，含所有 mermaid 圖解）、EVAL_REPORT（評估數字與圖表）。
+想先看圖再看文字，直接看 PLAN.md §7 跟本頁的 pipeline 圖。
 
 ## 授權
 

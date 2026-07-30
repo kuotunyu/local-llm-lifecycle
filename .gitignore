@@ -5,7 +5,7 @@ data/processed/*
 !data/processed/.gitkeep
 !data/processed/README.md
 
-# 私人筆記（檔名本身就會暴露「這是求職作品集」，沿用 tw-med-llm-qlora 的慣例）
+# 私人筆記（不進版本控制）
 INTERVIEW_PREP.md
 interview.md
 interview-notes.md

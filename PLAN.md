@@ -1,4 +1,4 @@
-# PLAN.md — 開源模型全生命週期作品集：實作藍圖
+# PLAN.md — 開源模型全生命週期專案：實作藍圖
 
 > **一句話**：把 `Qwen/Qwen3-8B` 用 DRCD 做繁中抽取式 QA 的 QLoRA 微調（Colab），回本機（Win11 + WSL2 + RTX 4090）合併、轉 GGUF、量化、部署到 Ollama / LM Studio，正式發佈到 Hugging Face，並以五組對照實驗回答：**「量化會吃掉多少微調效果？」**
 >
@@ -23,7 +23,7 @@
 
 1. **基底模型：`Qwen/Qwen3-8B`**（Apache-2.0、不 gated、命名自由）
    - 「要新一點且電腦跑得動」的查證結論：Llama 4 全系列（最小 Scout 109B MoE）、Qwen3.6（僅 27B/35B，27B bf16 ≈ 54GB 超出 4090）、Qwen3.5-9B（多模態 mmproj 拆檔，目前無任何 GGUF 能上 Ollama）全數排除，Qwen3-8B 是符合全部約束的最新版
-   - 代價：hybrid thinking template 是 GGUF/Ollama 鏈的經典雷點 → 以三層緩解馴服（§4.1），並轉化為 §7.3 與面試亮點
+   - 代價：hybrid thinking template 是 GGUF/Ollama 鏈的經典雷點 → 以三層緩解馴服（§4.1），並轉化為 §7.3
    - 保底備案：`Qwen/Qwen2.5-7B-Instruct`（純 ChatML 零 template 風險；若 Qwen3 template 馴服在 Phase 4 卡死超過預期，回退此模型重訓）
 2. **checkpoint 交接：HF private repo 主力**（`hub_strategy="checkpoint"`）**+ Google Drive 備援**（本地存檔後 `copytree`，不直接寫 FUSE 掛載）
 3. **文件語言：正體中文（zh-TW）為主，專有名詞直接用原文**（QLoRA、chat template、GGUF……不硬翻）；HF model card 同原則
@@ -81,7 +81,6 @@
 ├── PLAN.md                    # 本文件
 ├── DESIGN.md                  # Phase 6 定稿：選型理由、負例策略、template 轉檔陷阱（素材隨各 Phase 累積）
 ├── EVAL_REPORT.md             # Phase 5：五組對比 + W&B 截圖 + Q4 增益損耗專節 + forgetting + 錯誤案例
-├── INTERVIEW_PREP.md          # Phase 6：10 個面試問題
 ├── .gitignore
 ├── configs/
 │   └── train_config.yaml      # 超參數單一事實來源（notebook config cell 讀它）
@@ -110,7 +109,7 @@
 > **Phase 6 實際調整**：`DESIGN.md` 併入本文件的 §7；另外新增的 `DIAGRAMS.md` 也在 Phase 6
 > 尾聲拆散揉進 README.md（總覽圖）、本文件 §4.7/§7（機制與陷阱圖）、EVAL_REPORT.md（評估
 > 圖表）——避免圖解自己單獨佔一份文件、跟正文脫節。實際頂層文件只有 4 份：README.md、
-> PLAN.md（本文件）、EVAL_REPORT.md、INTERVIEW_PREP.md。
+> PLAN.md（本文件）、EVAL_REPORT.md。
 
 大檔案（合併後模型、f16 中間檔、GGUF）一律放 WSL2 ext4（如 `~/work/qwen3-drcd/`），**不入 repo、不放 /mnt/c**（9P 慢 3-5 倍）；只把最終 .gguf 複製到 Windows 一次餵 Ollama/LM Studio。
 
@@ -376,19 +375,19 @@ Phase 3 實戰驗證：使用者不慎關閉整個瀏覽器（非演練），重
 
 ### Phase 6：HF 發佈 + 文件定稿 ✅ 完成
 - `60_publish_hf.py`：LoRA repo + GGUF repo 轉正（完整 card：訓練細節、評估數據、用法（transformers / llama.cpp / Ollama / LM Studio）、Apache-2.0 權重授權、DRCD CC BY-SA 歸屬與引用、基底模型歸屬）；SFT dataset 轉 public（CC BY-SA 4.0）
-- README.md（五組結果摘要表置頂 + mermaid 流程圖 + quickstart）、DESIGN.md 定稿、INTERVIEW_PREP.md（10 題，指定含：QLoRA 原理、為什麼量化可能傷害微調行為、template 錯誤的症狀、什麼情況微調不如 prompting）
+- README.md（五組結果摘要表置頂 + mermaid 流程圖 + quickstart）、DESIGN.md 定稿
 - 驗收：兩個 HF repo 可公開存取、card 授權聲明完整；README 表格數字與 EVAL_REPORT 一致
 - **驗收結果（2026-07-18）**：三個資產全數發佈並確認 public：
   [LoRA](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA)、
   [GGUF](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF)（Q8_0 + Q4_K_M，
   以 HF API 逐一驗證 `private=False` 且檔案清單正確）、
   [dataset](https://huggingface.co/datasets/steven0226/drcd-zhtw-extractive-qa-sft)（訓練期
-  private → 轉 public）。README.md / DESIGN.md / INTERVIEW_PREP.md 皆已完稿，訓練期用的
+  private → 轉 public）。README.md / DESIGN.md 皆已完稿，訓練期用的
   private checkpoint repo（`qwen3-8b-drcd-qa-ckpt`、`-ckpt-sanity`）維持不動（未刪除，
   PLAN.md 原文標記「可刪」為選用，非必要動作，交由使用者自行決定是否清理）。
 - **文件整合（2026-07-18）**：使用者反饋頂層 .md 檔太多，把獨立的 `DESIGN.md` 併回本文件
   §7、把新增的 `DIAGRAMS.md`（7 張 mermaid 圖）拆散揉進 README.md / 本文件 / EVAL_REPORT.md
-  對應章節。最終只留 4 份頂層文件：README.md、PLAN.md、EVAL_REPORT.md、INTERVIEW_PREP.md。
+  對應章節。最終保留 3 份頂層文件：README.md、PLAN.md、EVAL_REPORT.md。
 
 ---
 
