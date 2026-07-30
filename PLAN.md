@@ -108,7 +108,7 @@
 
 > **Phase 6 實際調整**：`DESIGN.md` 併入本文件的 §7；另外新增的 `DIAGRAMS.md` 也在 Phase 6
 > 尾聲拆散揉進 README.md（總覽圖）、本文件 §4.7/§7（機制與陷阱圖）、EVAL_REPORT.md（評估
-> 圖表）——避免圖解自己單獨佔一份文件、跟正文脫節。實際頂層文件只有 4 份：README.md、
+> 圖表）——避免圖解自己單獨佔一份文件、跟正文脫節。實際頂層文件只有 3 份：README.md、
 > PLAN.md（本文件）、EVAL_REPORT.md。
 
 大檔案（合併後模型、f16 中間檔、GGUF）一律放 WSL2 ext4（如 `~/work/qwen3-drcd/`），**不入 repo、不放 /mnt/c**（9P 慢 3-5 倍）；只把最終 .gguf 複製到 Windows 一次餵 Ollama/LM Studio。
