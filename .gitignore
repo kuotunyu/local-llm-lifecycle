@@ -19,6 +19,9 @@ interview-notes.md
 # tmmlu_ft.jsonl）有進 git，那才是這個 repo 產出的東西；qid 是 `<科目>-<test split 列序>`，
 # 拿 qid 就能回查原題，稽核性不受影響。
 results/eval_raw/tmmlu_sample.json
+# 但保留 tmmlu_testset.json（2,000 題平衡子集，約 930 KB）：
+# 讓 54_test_option_permutation.py 在乾淨 clone 下也跑得起來，不必先下載資料集或跑 GPU。
+!results/eval_raw/tmmlu_testset.json
 
 # 重跑驗證用的暫存結果（不是報告依據）
 results/eval_repro_check/

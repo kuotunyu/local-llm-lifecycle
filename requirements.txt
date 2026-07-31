@@ -1,0 +1,19 @@
+# 本機評估環境（WSL2 Ubuntu 24.04 + RTX 4090）實際跑出 EVAL_REPORT 所有數字的版本。
+#
+# torch 要配合你自己的 CUDA 版本安裝，不要直接 pip install torch：
+#   pip install torch --index-url https://download.pytorch.org/whl/cu130
+# 本專案實測環境：torch 2.11.0+cu130 / CUDA build 13.0 / NVIDIA driver 591.86 / Python 3.12.3
+#
+# 訓練不在這裡（Colab + unsloth，見 notebooks/colab_qlora_train.ipynb）；
+# 這份只涵蓋「本機合併 → 轉檔 → 評估 → 發佈」這條鏈。
+
+transformers==4.57.6
+peft==0.19.1
+datasets==5.0.1          # 51_eval_tmmlu.py 取 TMMLU+ 用；2026-07-30 從 REST API 換過來
+numpy==1.26.4            # 52/54 的 bootstrap 用；刻意不引入 scipy
+huggingface_hub==0.36.2  # 60_publish_hf.py 上傳與 model card
+requests==2.34.2
+
+# 非 Python 相依（版本記錄在 PLAN.md Phase 4）：
+#   llama.cpp build commit a5822222909b785f23ddc74ce3c8f85bd0e38562（轉檔 + 量化 + llama-server）
+#   Ollama / LM Studio（部署驗證，見 deploy/）

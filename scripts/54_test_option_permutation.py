@@ -25,7 +25,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-SAMPLE = REPO / "results" / "eval_raw" / "tmmlu_sample.json"
+# 全量考卷（8.9 MB）沒有進 git；`tmmlu_testset.json` 是為了讓這支測試在乾淨 clone 下
+# 也跑得起來而提交的平衡子集（2,000 題，四個 gold 字母各 500，取自同一份 test split）。
+FULL_SAMPLE = REPO / "results" / "eval_raw" / "tmmlu_sample.json"
+TEST_SAMPLE = REPO / "results" / "eval_raw" / "tmmlu_testset.json"
 
 spec = importlib.util.spec_from_file_location(
     "perm", HERE / "54_tmmlu_option_permutation.py")
@@ -34,11 +37,15 @@ spec.loader.exec_module(m)
 L = m.LETTERS
 
 
-def load_rows():
-    if not SAMPLE.exists():
-        print(f"找不到 {SAMPLE}。先跑 51_eval_tmmlu.py --full 產生考卷，或用 --full 重建。")
+def load_rows(force_testset: bool = False):
+    src = TEST_SAMPLE if force_testset else (
+        FULL_SAMPLE if FULL_SAMPLE.exists() else TEST_SAMPLE)
+    if not src.exists():
+        print(f"找不到 {FULL_SAMPLE} 或 {TEST_SAMPLE}。"
+              f"跑 `51_eval_tmmlu.py --full --groups none --out-dir results/eval_raw` 重建考卷。")
         sys.exit(2)
-    rows = json.loads(SAMPLE.read_text(encoding="utf-8"))
+    print(f"資料來源：{src.name}")
+    rows = json.loads(src.read_text(encoding="utf-8"))
     # 選項內容重複的題目本來就會被 build() 排除，測試也要排除
     return [r for r in rows if len(set(str(r[x]) for x in L)) == 4]
 
@@ -125,7 +132,10 @@ def test_perm_averaged_blindspot(rows):
     print("       -> 位移平均量不到選項偏誤；主要指標必須是多數決")
 
     # 對照：gold 偏斜時位移平均才會動，證明它量的是「對 gold 邊際不均的穩健度」
-    skewed = by_gold["B"][:800] + by_gold["A"][:200]
+    # gold 偏斜的對照組：B 佔約 80%。切片大小依資料量調整，
+    # 這樣全量考卷與 committed 子集都適用。
+    nb = min(len(by_gold["B"]), 800)
+    skewed = by_gold["B"][:nb] + by_gold["A"][:nb // 4]
     mapping2, perms2 = make_case(skewed)
     preds2 = {key: ("D" if p["gold_answer"] == "B" else p["gold_answer"])
               for key, p in perms2.items()}
@@ -137,7 +147,8 @@ def test_perm_averaged_blindspot(rows):
 
 
 def main() -> None:
-    rows = load_rows()
+    # --testset 強制走 committed 子集，用來驗證乾淨 clone 的路徑真的跑得起來
+    rows = load_rows(force_testset="--testset" in sys.argv)
     rng = random.Random(0)
     subset = rng.sample(rows, min(400, len(rows)))
     print(f"用 {len(subset)} 題真實 TMMLU+ 題目測試\n")

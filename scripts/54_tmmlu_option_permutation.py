@@ -435,13 +435,33 @@ def main() -> None:
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--analyze", action="store_true")
     parser.add_argument("--src", default="results/eval_raw/tmmlu_sample.json")
-    parser.add_argument("--out-dir", default="results/eval_perm")
+    # 預設值刻意放在 repo 外：51_eval_tmmlu.py 會把彙總寫到 out_dir.parent/"tmmlu_summary.json"，
+    # 所以任何指向 results/ 底下的 out-dir 都會覆蓋掉 results/tmmlu_summary.json——
+    # 也就是 README、EVAL_REPORT §4、PLAN 與兩張 HF model card 背後的那份正式結果。
+    parser.add_argument("--out-dir", default="~/tmmlu_perm/eval_raw")
     parser.add_argument("--stats-path", default="results/tmmlu_option_permutation.json")
     parser.add_argument("--allow-incomplete", action="store_true",
                         help="容許推論尚未跑完就分析（結果不可信，只供中途觀察）")
     args = parser.parse_args()
 
-    out_dir = Path(args.out_dir)
+    out_dir = Path(args.out_dir).expanduser()
+
+    # 硬性守衛：out-dir 指到 results/ 底下會讓 51_eval_tmmlu.py 用一份「對 80,440 列彙總、
+    # 看起來很合理但定義完全不同」的檔案覆蓋掉 results/tmmlu_summary.json。那是招牌結果檔，
+    # 被覆蓋不會報錯、也不容易察覺，所以直接擋掉而不是只在 docstring 提醒。
+    results_dir = (Path(__file__).resolve().parent.parent / "results").resolve()
+    try:
+        inside = out_dir.resolve().is_relative_to(results_dir)
+    except (AttributeError, ValueError):      # Python < 3.9 沒有 is_relative_to
+        inside = str(out_dir.resolve()).startswith(str(results_dir))
+    if inside:
+        raise SystemExit(
+            f"--out-dir 不可指向 {results_dir} 底下（給的是 {out_dir}）。\n"
+            f"51_eval_tmmlu.py 會寫 out_dir.parent/'tmmlu_summary.json'，"
+            f"會覆蓋掉正式結果檔。請用 repo 外的路徑，例如 ~/tmmlu_perm/eval_raw，"
+            f"再用 --stats-path 把統計寫回 results/。"
+        )
+
     if args.build:
         build(Path(args.src), out_dir)
     elif args.analyze:

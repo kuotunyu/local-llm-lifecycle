@@ -19,7 +19,7 @@
 | 4 | FT Q8_0（轉檔損耗探針） | 0.9328 | 0.9706 | 100.0% |
 | 5 | **FT Q4_K_M**（實際部署版） | **0.9330** | **0.9700** | 100.0% |
 
-量化幾乎沒有吃掉微調效果：（組5−組1）= 0.4574 EM ≈（組3−組1）= 0.4569 EM。
+量化幾乎沒有吃掉微調效果：（組5−組1）= 0.4573 EM ≈（組3−組1）= 0.4569 EM。
 
 **TMMLU+ forgetting check**（66 科目、test split 全量 **20,118 題**，base vs FT 同在 bf16 下比）：
 macro accuracy 0.5936 → 0.5604，**Δ = −3.32 個百分點，95% CI [−3.96, −2.69]**
@@ -32,8 +32,9 @@ macro accuracy 0.5936 → 0.5604，**Δ = −3.32 個百分點，95% CI [−3.96
 進一步用 160,880 次推論實測「這個偏誤有多少校正得回來」：把選項內容做循環位移、讓正確答案
 輪流落在 A/B/C/D 再投票，**回收了 45% 的退步**（+1.54 pp，95% CI [+0.90, +2.19]）。
 而且偏誤**撐過了位移**（FT 位移後仍只有 14.7% 選 B、32.2% 選 D，與位移前幾乎一致），
-證明它是位置偏誤而不是集成效應。剩下的約 1.9 pp 只能說「不是位置偏誤」，
-**不能**反推是知識遺忘——內容型偏誤在這個設計裡沒有被檢定。
+證明它是位置偏誤而不是集成效應。最可疑的內容維度（選項長度）也檢定過了：它存在但比位置
+效應小 2.7 倍，且 FT 並沒有偏好較短的選項。剩下的約 1.9 pp **仍不能**反推是知識遺忘——
+其餘內容特徵尚未檢定。
 
 > **這份報告修正過自己**：先前版本用 200 題（每科 3 題）得到 −12.25 pp、宣稱「明顯的
 > catastrophic forgetting」。全量重跑後量級只有 −3.32 pp，而且舊版列為「略有進步」的科目
@@ -126,6 +127,55 @@ tokenizer = AutoTokenizer.from_pretrained("steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA
 ```
 
 完整用法（llama.cpp / LM Studio）見各 HF repo model card。
+
+## 復現評估數字
+
+本報告所有數字都可以重跑。環境版本見 [requirements.txt](requirements.txt)
+（實測：Python 3.12.3、torch 2.11.0+cu130、RTX 4090 24GB、WSL2 Ubuntu 24.04、driver 591.86）。
+
+**不需要 GPU** 的部分——逐題結果已進 git，統計可以直接重算：
+
+```bash
+python3 scripts/52_tmmlu_paired_stats.py --out-dir results/eval_raw
+```
+
+輸出 Δ macro、配對分層 bootstrap 的 95% CI、McNemar 精確檢定、逐科目 CI 與選項偏誤診斷，
+應與 [results/tmmlu_paired_stats.json](results/tmmlu_paired_stats.json) 一致。
+
+**需要 GPU** 的部分（TMMLU+ 全量 20,118 題 × 2 個權重，4090 上約 15 分鐘）：
+
+```bash
+python3 scripts/51_eval_tmmlu.py --full --groups all --base-model unsloth/Qwen3-8B --merged-dir <合併後的 bf16 目錄> --out-dir results/eval_raw
+```
+
+考卷（`results/eval_raw/tmmlu_sample.json`，8.9 MB）**沒有進 git**——它是
+`ikala/tmmluplus` test split（MIT）的逐字副本，由上面這條指令決定性重建，SHA-256 可核對。
+逐題**結果**有進 git，`qid` 格式是 `<科目>-<test split 列序>`，拿 qid 就能回查原題。
+另外提交了 `results/eval_raw/tmmlu_testset.json`（2,000 題平衡子集，四個 gold 字母各 500），
+只為了讓下面那支驗證測試在乾淨 clone 下也跑得起來。
+
+| 想重跑什麼 | 指令 | clone 後可直接跑？ |
+|---|---|---|
+| 置換邏輯的驗證測試 | `54_test_option_permutation.py` | **可以**（用 committed 子集，數秒） |
+| 配對檢定與 CI | `52_tmmlu_paired_stats.py --out-dir results/eval_raw` | **可以**（逐題結果已進 git） |
+| 位置 vs 內容長度偏誤 | `55_content_bias_check.py` | 需先重建考卷（無 GPU） |
+| batch 組成敏感度 | `53_batch_sensitivity.py --dir-a … --dir-b …` | 需先自行跑第二組 batch 設定 |
+| 選項位移校正的聚合 | `54_tmmlu_option_permutation.py --analyze` | 需先跑位移推論 |
+| TMMLU+ 全量推論 | `51_eval_tmmlu.py --full` | 需 GPU（約 15 分） |
+| 選項位移全量推論 | `54_…py --build` 後接 `51_…py --full` | 需 GPU（約 45 分） |
+| DRCD 五組對照 | `50_eval_qa.py --groups all` | 需 GPU |
+
+最快確認這個 repo 的統計不是空話：clone 下來直接跑
+
+```bash
+python3 scripts/54_test_option_permutation.py
+```
+
+它用行為已知的假模型當 oracle 斷言指標的理論值，其中一條鎖住了本專案發表前攔下的錯誤
+（「位移平均」在 gold 均勻時量不到選項偏誤，回收量恆為 0）——有人把主指標改回去，測試就會失敗。
+
+**注意**：跑 `54_…py --build` 時 `--out-dir` 不要指向 `results/` 底下
+（腳本會擋，因為 `51_eval_tmmlu.py` 會把彙總寫到 `out_dir.parent`，會覆蓋正式結果檔）。
 
 ## 專案結構與文件
 
