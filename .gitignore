@@ -5,11 +5,6 @@ data/processed/*
 !data/processed/.gitkeep
 !data/processed/README.md
 
-# 私人筆記（不進版本控制）
-INTERVIEW_PREP.md
-interview.md
-interview-notes.md
-
 # 捨棄的實驗輸出（保留在本機，不入公開版）
 *.discarded-*
 *.bak-*
