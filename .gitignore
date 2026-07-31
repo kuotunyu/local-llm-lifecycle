@@ -12,6 +12,16 @@ interview-notes.md
 
 # 捨棄的實驗輸出（保留在本機，不入公開版）
 *.discarded-*
+*.bak-*
+
+# TMMLU+ 全量考卷（20,118 題、約 8.9 MB）：ikala/tmmluplus test split 的逐字副本，
+# 由 `51_eval_tmmlu.py --full` 決定性重建，不需要進 git。逐題**結果**（tmmlu_base.jsonl /
+# tmmlu_ft.jsonl）有進 git，那才是這個 repo 產出的東西；qid 是 `<科目>-<test split 列序>`，
+# 拿 qid 就能回查原題，稽核性不受影響。
+results/eval_raw/tmmlu_sample.json
+
+# 重跑驗證用的暫存結果（不是報告依據）
+results/eval_repro_check/
 
 # 模型與大檔（合併模型、GGUF 一律放 WSL2 ext4，不進 repo）
 *.gguf

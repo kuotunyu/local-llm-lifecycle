@@ -1,0 +1,702 @@
+{
+  "source_dir": "results/eval_raw",
+  "n_items": 20118,
+  "n_subjects": 66,
+  "point_estimate": {
+    "base_macro_accuracy": 0.5936482844913633,
+    "ft_macro_accuracy": 0.5604246517401548,
+    "delta_macro_accuracy": -0.03322363275120854,
+    "base_micro_accuracy": 0.5937468933293568,
+    "ft_micro_accuracy": 0.5562183119594393,
+    "delta_micro_accuracy": -0.037528581369917546
+  },
+  "mcnemar_exact": {
+    "both_correct": 10109,
+    "both_wrong": 7092,
+    "base_correct_ft_wrong": 1836,
+    "base_wrong_ft_correct": 1081,
+    "n_discordant": 2917,
+    "p_value_two_sided": 8.893546299909184e-45
+  },
+  "paired_stratified_bootstrap": {
+    "n_bootstrap": 10000,
+    "seed": 20260730,
+    "delta_macro_accuracy": {
+      "ci95_low": -0.03958589411172619,
+      "ci95_high": -0.02686328681060836,
+      "bootstrap_mean": -0.03323596696530045,
+      "bootstrap_se": 0.003234905328253199,
+      "frac_bootstrap_ge_zero": 0.0
+    },
+    "delta_micro_accuracy": {
+      "ci95_low": -0.0428472015110846,
+      "ci95_high": -0.032209961228750375,
+      "bootstrap_mean": -0.03752554925936972,
+      "bootstrap_se": 0.002704292945687949,
+      "frac_bootstrap_ge_zero": 0.0
+    },
+    "per_subject_delta": {
+      "accounting": {
+        "n": 191,
+        "base_accuracy": 0.3403141361256545,
+        "ft_accuracy": 0.33507853403141363,
+        "delta": -0.005235602094240843,
+        "ci95_low": -0.05759162303664922,
+        "ci95_high": 0.04712041884816753
+      },
+      "administrative_law": {
+        "n": 420,
+        "base_accuracy": 0.4857142857142857,
+        "ft_accuracy": 0.42142857142857143,
+        "delta": -0.06428571428571428,
+        "ci95_low": -0.10714285714285715,
+        "ci95_high": -0.01904761904761909
+      },
+      "advance_chemistry": {
+        "n": 123,
+        "base_accuracy": 0.5772357723577236,
+        "ft_accuracy": 0.5691056910569106,
+        "delta": -0.008130081300813052,
+        "ci95_low": -0.06504065040650409,
+        "ci95_high": 0.04878048780487809
+      },
+      "agriculture": {
+        "n": 151,
+        "base_accuracy": 0.5165562913907285,
+        "ft_accuracy": 0.46357615894039733,
+        "delta": -0.05298013245033112,
+        "ci95_low": -0.1125827814569536,
+        "ci95_high": 0.006622516556291369
+      },
+      "anti_money_laundering": {
+        "n": 134,
+        "base_accuracy": 0.7164179104477612,
+        "ft_accuracy": 0.6716417910447762,
+        "delta": -0.04477611940298498,
+        "ci95_low": -0.10447761194029859,
+        "ci95_high": 0.014925373134328401
+      },
+      "auditing": {
+        "n": 550,
+        "base_accuracy": 0.5072727272727273,
+        "ft_accuracy": 0.4618181818181818,
+        "delta": -0.045454545454545525,
+        "ci95_low": -0.08000000000000007,
+        "ci95_high": -0.00909090909090915
+      },
+      "basic_medical_science": {
+        "n": 954,
+        "base_accuracy": 0.7452830188679245,
+        "ft_accuracy": 0.7117400419287212,
+        "delta": -0.03354297693920327,
+        "ci95_low": -0.05450733752620551,
+        "ci95_high": -0.012578616352201255
+      },
+      "business_management": {
+        "n": 139,
+        "base_accuracy": 0.6618705035971223,
+        "ft_accuracy": 0.6474820143884892,
+        "delta": -0.014388489208633115,
+        "ci95_low": -0.06474820143884885,
+        "ci95_high": 0.03597122302158273
+      },
+      "chinese_language_and_literature": {
+        "n": 199,
+        "base_accuracy": 0.5728643216080402,
+        "ft_accuracy": 0.5376884422110553,
+        "delta": -0.035175879396984966,
+        "ci95_low": -0.09547738693467345,
+        "ci95_high": 0.025125628140703515
+      },
+      "clinical_psychology": {
+        "n": 125,
+        "base_accuracy": 0.648,
+        "ft_accuracy": 0.632,
+        "delta": -0.016000000000000014,
+        "ci95_low": -0.07999999999999996,
+        "ci95_high": 0.04800000000000004
+      },
+      "computer_science": {
+        "n": 174,
+        "base_accuracy": 0.764367816091954,
+        "ft_accuracy": 0.7183908045977011,
+        "delta": -0.04597701149425293,
+        "ci95_low": -0.09770114942528729,
+        "ci95_high": 0.0
+      },
+      "culinary_skills": {
+        "n": 292,
+        "base_accuracy": 0.589041095890411,
+        "ft_accuracy": 0.5821917808219178,
+        "delta": -0.006849315068493178,
+        "ci95_low": -0.041095890410958846,
+        "ci95_high": 0.0273972602739726
+      },
+      "dentistry": {
+        "n": 399,
+        "base_accuracy": 0.5488721804511278,
+        "ft_accuracy": 0.506265664160401,
+        "delta": -0.04260651629072687,
+        "ci95_low": -0.08020050125313288,
+        "ci95_high": -0.005012531328320802
+      },
+      "economics": {
+        "n": 393,
+        "base_accuracy": 0.6030534351145038,
+        "ft_accuracy": 0.5826972010178118,
+        "delta": -0.020356234096692072,
+        "ci95_low": -0.055979643765903364,
+        "ci95_high": 0.01526717557251911
+      },
+      "education": {
+        "n": 124,
+        "base_accuracy": 0.6451612903225806,
+        "ft_accuracy": 0.6129032258064516,
+        "delta": -0.032258064516129004,
+        "ci95_low": -0.09677419354838712,
+        "ci95_high": 0.032258064516129004
+      },
+      "education_(profession_level)": {
+        "n": 486,
+        "base_accuracy": 0.5267489711934157,
+        "ft_accuracy": 0.4876543209876543,
+        "delta": -0.03909465020576136,
+        "ci95_low": -0.07201646090534986,
+        "ci95_high": -0.0041152263374485964
+      },
+      "educational_psychology": {
+        "n": 176,
+        "base_accuracy": 0.6988636363636364,
+        "ft_accuracy": 0.7045454545454546,
+        "delta": 0.005681818181818232,
+        "ci95_low": -0.03409090909090906,
+        "ci95_high": 0.045454545454545525
+      },
+      "engineering_math": {
+        "n": 103,
+        "base_accuracy": 0.47572815533980584,
+        "ft_accuracy": 0.4174757281553398,
+        "delta": -0.05825242718446605,
+        "ci95_low": -0.13592233009708737,
+        "ci95_high": 0.01941747572815533
+      },
+      "finance_banking": {
+        "n": 135,
+        "base_accuracy": 0.5481481481481482,
+        "ft_accuracy": 0.5259259259259259,
+        "delta": -0.022222222222222254,
+        "ci95_low": -0.10370370370370369,
+        "ci95_high": 0.059259259259259234
+      },
+      "financial_analysis": {
+        "n": 382,
+        "base_accuracy": 0.5340314136125655,
+        "ft_accuracy": 0.518324607329843,
+        "delta": -0.015706806282722474,
+        "ci95_low": -0.04973821989528798,
+        "ci95_high": 0.01832460732984298
+      },
+      "fire_science": {
+        "n": 124,
+        "base_accuracy": 0.3790322580645161,
+        "ft_accuracy": 0.3951612903225806,
+        "delta": 0.016129032258064502,
+        "ci95_low": -0.05645161290322581,
+        "ci95_high": 0.08870967741935482
+      },
+      "general_principles_of_law": {
+        "n": 106,
+        "base_accuracy": 0.5,
+        "ft_accuracy": 0.3867924528301887,
+        "delta": -0.1132075471698113,
+        "ci95_low": -0.18867924528301888,
+        "ci95_high": -0.037735849056603765
+      },
+      "geography_of_taiwan": {
+        "n": 768,
+        "base_accuracy": 0.6263020833333334,
+        "ft_accuracy": 0.5911458333333334,
+        "delta": -0.03515625,
+        "ci95_low": -0.05989583333333337,
+        "ci95_high": -0.01041666666666663
+      },
+      "human_behavior": {
+        "n": 309,
+        "base_accuracy": 0.7022653721682848,
+        "ft_accuracy": 0.7055016181229773,
+        "delta": 0.003236245954692518,
+        "ci95_low": -0.03883495145631066,
+        "ci95_high": 0.042152103559869425
+      },
+      "insurance_studies": {
+        "n": 760,
+        "base_accuracy": 0.5289473684210526,
+        "ft_accuracy": 0.5039473684210526,
+        "delta": -0.025000000000000022,
+        "ci95_low": -0.05394736842105263,
+        "ci95_high": 0.003947368421052588
+      },
+      "introduction_to_law": {
+        "n": 237,
+        "base_accuracy": 0.5147679324894515,
+        "ft_accuracy": 0.46835443037974683,
+        "delta": -0.046413502109704685,
+        "ci95_low": -0.10126582278481017,
+        "ci95_high": 0.008438818565400852
+      },
+      "jce_humanities": {
+        "n": 90,
+        "base_accuracy": 0.6666666666666666,
+        "ft_accuracy": 0.6444444444444445,
+        "delta": -0.022222222222222143,
+        "ci95_low": -0.09999999999999998,
+        "ci95_high": 0.05555555555555558
+      },
+      "junior_chemistry": {
+        "n": 209,
+        "base_accuracy": 0.5502392344497608,
+        "ft_accuracy": 0.569377990430622,
+        "delta": 0.019138755980861233,
+        "ci95_low": -0.02392344497607657,
+        "ci95_high": 0.062200956937799035
+      },
+      "junior_chinese_exam": {
+        "n": 175,
+        "base_accuracy": 0.8342857142857143,
+        "ft_accuracy": 0.7828571428571428,
+        "delta": -0.05142857142857149,
+        "ci95_low": -0.10285714285714276,
+        "ci95_high": -0.005714285714285672
+      },
+      "junior_math_exam": {
+        "n": 175,
+        "base_accuracy": 0.5028571428571429,
+        "ft_accuracy": 0.42857142857142855,
+        "delta": -0.07428571428571434,
+        "ci95_low": -0.13714285714285718,
+        "ci95_high": -0.011428571428571455
+      },
+      "junior_science_exam": {
+        "n": 213,
+        "base_accuracy": 0.6854460093896714,
+        "ft_accuracy": 0.6713615023474179,
+        "delta": -0.014084507042253502,
+        "ci95_low": -0.05164319248826288,
+        "ci95_high": 0.023474178403755874
+      },
+      "junior_social_studies": {
+        "n": 126,
+        "base_accuracy": 0.753968253968254,
+        "ft_accuracy": 0.746031746031746,
+        "delta": -0.007936507936507908,
+        "ci95_low": -0.039682539682539764,
+        "ci95_high": 0.023809523809523836
+      },
+      "logic_reasoning": {
+        "n": 139,
+        "base_accuracy": 0.41007194244604317,
+        "ft_accuracy": 0.3669064748201439,
+        "delta": -0.04316546762589929,
+        "ci95_low": -0.10071942446043164,
+        "ci95_high": 0.01438848920863306
+      },
+      "macroeconomics": {
+        "n": 411,
+        "base_accuracy": 0.6180048661800487,
+        "ft_accuracy": 0.5790754257907542,
+        "delta": -0.03892944038929447,
+        "ci95_low": -0.07785888077858882,
+        "ci95_high": 0.0
+      },
+      "management_accounting": {
+        "n": 215,
+        "base_accuracy": 0.5116279069767442,
+        "ft_accuracy": 0.4744186046511628,
+        "delta": -0.037209302325581395,
+        "ci95_low": -0.08837209302325577,
+        "ci95_high": 0.009302325581395376
+      },
+      "marketing_management": {
+        "n": 93,
+        "base_accuracy": 0.8172043010752689,
+        "ft_accuracy": 0.7526881720430108,
+        "delta": -0.06451612903225812,
+        "ci95_low": -0.13978494623655913,
+        "ci95_high": 0.010752688172043001
+      },
+      "mechanical": {
+        "n": 118,
+        "base_accuracy": 0.7457627118644068,
+        "ft_accuracy": 0.7372881355932204,
+        "delta": -0.008474576271186418,
+        "ci95_low": -0.06779661016949146,
+        "ci95_high": 0.04237288135593231
+      },
+      "music": {
+        "n": 278,
+        "base_accuracy": 0.6007194244604317,
+        "ft_accuracy": 0.5611510791366906,
+        "delta": -0.039568345323741094,
+        "ci95_low": -0.08633093525179858,
+        "ci95_high": 0.007194244604316502
+      },
+      "national_protection": {
+        "n": 211,
+        "base_accuracy": 0.7061611374407583,
+        "ft_accuracy": 0.6587677725118484,
+        "delta": -0.04739336492890989,
+        "ci95_low": -0.09952606635071093,
+        "ci95_high": 0.004739336492891044
+      },
+      "nautical_science": {
+        "n": 551,
+        "base_accuracy": 0.47549909255898365,
+        "ft_accuracy": 0.44101633393829404,
+        "delta": -0.03448275862068961,
+        "ci95_low": -0.06715063520871145,
+        "ci95_high": -0.0018148820326678848
+      },
+      "occupational_therapy_for_psychological_disorders": {
+        "n": 543,
+        "base_accuracy": 0.7108655616942909,
+        "ft_accuracy": 0.6685082872928176,
+        "delta": -0.0423572744014733,
+        "ci95_low": -0.07366482504604055,
+        "ci95_high": -0.011049723756906049
+      },
+      "official_document_management": {
+        "n": 222,
+        "base_accuracy": 0.5720720720720721,
+        "ft_accuracy": 0.5495495495495496,
+        "delta": -0.022522522522522515,
+        "ci95_low": -0.07207207207207211,
+        "ci95_high": 0.027027027027027084
+      },
+      "optometry": {
+        "n": 920,
+        "base_accuracy": 0.47934782608695653,
+        "ft_accuracy": 0.41195652173913044,
+        "delta": -0.06739130434782609,
+        "ci95_low": -0.09347826086956523,
+        "ci95_high": -0.040217391304347816
+      },
+      "organic_chemistry": {
+        "n": 109,
+        "base_accuracy": 0.5963302752293578,
+        "ft_accuracy": 0.5871559633027523,
+        "delta": -0.00917431192660545,
+        "ci95_low": -0.06422018348623854,
+        "ci95_high": 0.04587155963302747
+      },
+      "pharmacology": {
+        "n": 577,
+        "base_accuracy": 0.6516464471403813,
+        "ft_accuracy": 0.608318890814558,
+        "delta": -0.0433275563258233,
+        "ci95_low": -0.07452339688041598,
+        "ci95_high": -0.012131715771230511
+      },
+      "pharmacy": {
+        "n": 391,
+        "base_accuracy": 0.45012787723785164,
+        "ft_accuracy": 0.42455242966751916,
+        "delta": -0.025575447570332477,
+        "ci95_low": -0.06393861892583125,
+        "ci95_high": 0.012787723785166238
+      },
+      "physical_education": {
+        "n": 179,
+        "base_accuracy": 0.5977653631284916,
+        "ft_accuracy": 0.5363128491620112,
+        "delta": -0.06145251396648044,
+        "ci95_low": -0.11173184357541904,
+        "ci95_high": -0.011173184357541888
+      },
+      "physics": {
+        "n": 97,
+        "base_accuracy": 0.5670103092783505,
+        "ft_accuracy": 0.5876288659793815,
+        "delta": 0.020618556701030966,
+        "ci95_low": -0.04123711340206193,
+        "ci95_high": 0.08247422680412375
+      },
+      "politic_science": {
+        "n": 995,
+        "base_accuracy": 0.6170854271356784,
+        "ft_accuracy": 0.5587939698492462,
+        "delta": -0.05829145728643215,
+        "ci95_low": -0.08442211055276383,
+        "ci95_high": -0.032160804020100464
+      },
+      "real_estate": {
+        "n": 92,
+        "base_accuracy": 0.44565217391304346,
+        "ft_accuracy": 0.44565217391304346,
+        "delta": 0.0,
+        "ci95_low": -0.09782608695652173,
+        "ci95_high": 0.09782608695652173
+      },
+      "secondary_physics": {
+        "n": 112,
+        "base_accuracy": 0.6696428571428571,
+        "ft_accuracy": 0.6339285714285714,
+        "delta": -0.0357142857142857,
+        "ci95_low": -0.0982142857142857,
+        "ci95_high": 0.0267857142857143
+      },
+      "statistics_and_machine_learning": {
+        "n": 224,
+        "base_accuracy": 0.7008928571428571,
+        "ft_accuracy": 0.6741071428571429,
+        "delta": -0.02678571428571419,
+        "ci95_low": -0.0625,
+        "ci95_high": 0.004464285714285698
+      },
+      "taiwanese_hokkien": {
+        "n": 129,
+        "base_accuracy": 0.34108527131782945,
+        "ft_accuracy": 0.3023255813953488,
+        "delta": -0.038759689922480633,
+        "ci95_low": -0.12403100775193798,
+        "ci95_high": 0.046511627906976716
+      },
+      "taxation": {
+        "n": 375,
+        "base_accuracy": 0.42133333333333334,
+        "ft_accuracy": 0.3626666666666667,
+        "delta": -0.058666666666666645,
+        "ci95_low": -0.10399999999999998,
+        "ci95_high": -0.013333333333333364
+      },
+      "technical": {
+        "n": 402,
+        "base_accuracy": 0.6169154228855721,
+        "ft_accuracy": 0.6094527363184079,
+        "delta": -0.007462686567164201,
+        "ci95_low": -0.04477611940298509,
+        "ci95_high": 0.02985074626865669
+      },
+      "three_principles_of_people": {
+        "n": 139,
+        "base_accuracy": 0.697841726618705,
+        "ft_accuracy": 0.7410071942446043,
+        "delta": 0.043165467625899234,
+        "ci95_low": -0.014388489208633115,
+        "ci95_high": 0.1007194244604317
+      },
+      "trade": {
+        "n": 502,
+        "base_accuracy": 0.4302788844621514,
+        "ft_accuracy": 0.3645418326693227,
+        "delta": -0.06573705179282868,
+        "ci95_low": -0.10159362549800793,
+        "ci95_high": -0.031872509960159334
+      },
+      "traditional_chinese_medicine_clinical_medicine": {
+        "n": 278,
+        "base_accuracy": 0.5971223021582733,
+        "ft_accuracy": 0.564748201438849,
+        "delta": -0.03237410071942437,
+        "ci95_low": -0.08633093525179852,
+        "ci95_high": 0.021582733812949617
+      },
+      "trust_practice": {
+        "n": 401,
+        "base_accuracy": 0.46633416458852867,
+        "ft_accuracy": 0.40648379052369077,
+        "delta": -0.0598503740648379,
+        "ci95_low": -0.10224438902743144,
+        "ci95_high": -0.01995012468827928
+      },
+      "ttqav2": {
+        "n": 113,
+        "base_accuracy": 0.7699115044247787,
+        "ft_accuracy": 0.6902654867256637,
+        "delta": -0.07964601769911506,
+        "ci95_low": -0.1415929203539823,
+        "ci95_high": -0.017699115044247815
+      },
+      "tve_chinese_language": {
+        "n": 483,
+        "base_accuracy": 0.7639751552795031,
+        "ft_accuracy": 0.7308488612836439,
+        "delta": -0.0331262939958592,
+        "ci95_low": -0.06211180124223603,
+        "ci95_high": -0.0041407867494823725
+      },
+      "tve_design": {
+        "n": 480,
+        "base_accuracy": 0.7458333333333333,
+        "ft_accuracy": 0.70625,
+        "delta": -0.039583333333333304,
+        "ci95_low": -0.0708333333333333,
+        "ci95_high": -0.008333333333333415
+      },
+      "tve_mathematics": {
+        "n": 150,
+        "base_accuracy": 0.4066666666666667,
+        "ft_accuracy": 0.38666666666666666,
+        "delta": -0.020000000000000018,
+        "ci95_low": -0.08666666666666667,
+        "ci95_high": 0.04666666666666669
+      },
+      "tve_natural_sciences": {
+        "n": 424,
+        "base_accuracy": 0.75,
+        "ft_accuracy": 0.6933962264150944,
+        "delta": -0.05660377358490565,
+        "ci95_low": -0.09198113207547165,
+        "ci95_high": -0.021226415094339646
+      },
+      "veterinary_pathology": {
+        "n": 283,
+        "base_accuracy": 0.5759717314487632,
+        "ft_accuracy": 0.5053003533568905,
+        "delta": -0.07067137809187274,
+        "ci95_low": -0.11307420494699649,
+        "ci95_high": -0.028268551236749095
+      },
+      "veterinary_pharmacology": {
+        "n": 540,
+        "base_accuracy": 0.7037037037037037,
+        "ft_accuracy": 0.6648148148148149,
+        "delta": -0.03888888888888886,
+        "ci95_low": -0.06481481481481477,
+        "ci95_high": -0.012962962962962954
+      }
+    }
+  },
+  "quantization": {
+    "n_subjects": 66,
+    "items_per_subject_min": 90,
+    "items_per_subject_max": 995,
+    "per_subject_accuracy_resolution_max": 0.011111111111111112,
+    "delta_macro_resolution_max": 0.00016835016835016836,
+    "one_item_flip_moves_subject_accuracy_by": 0.011111111111111112,
+    "per_subject_delta": {
+      "accounting": -0.005235602094240843,
+      "administrative_law": -0.06428571428571428,
+      "advance_chemistry": -0.008130081300813052,
+      "agriculture": -0.05298013245033112,
+      "anti_money_laundering": -0.04477611940298498,
+      "auditing": -0.045454545454545525,
+      "basic_medical_science": -0.03354297693920327,
+      "business_management": -0.014388489208633115,
+      "chinese_language_and_literature": -0.035175879396984966,
+      "clinical_psychology": -0.016000000000000014,
+      "computer_science": -0.04597701149425293,
+      "culinary_skills": -0.006849315068493178,
+      "dentistry": -0.04260651629072687,
+      "economics": -0.020356234096692072,
+      "education": -0.032258064516129004,
+      "education_(profession_level)": -0.03909465020576136,
+      "educational_psychology": 0.005681818181818232,
+      "engineering_math": -0.05825242718446605,
+      "finance_banking": -0.022222222222222254,
+      "financial_analysis": -0.015706806282722474,
+      "fire_science": 0.016129032258064502,
+      "general_principles_of_law": -0.1132075471698113,
+      "geography_of_taiwan": -0.03515625,
+      "human_behavior": 0.003236245954692518,
+      "insurance_studies": -0.025000000000000022,
+      "introduction_to_law": -0.046413502109704685,
+      "jce_humanities": -0.022222222222222143,
+      "junior_chemistry": 0.019138755980861233,
+      "junior_chinese_exam": -0.05142857142857149,
+      "junior_math_exam": -0.07428571428571434,
+      "junior_science_exam": -0.014084507042253502,
+      "junior_social_studies": -0.007936507936507908,
+      "logic_reasoning": -0.04316546762589929,
+      "macroeconomics": -0.03892944038929447,
+      "management_accounting": -0.037209302325581395,
+      "marketing_management": -0.06451612903225812,
+      "mechanical": -0.008474576271186418,
+      "music": -0.039568345323741094,
+      "national_protection": -0.04739336492890989,
+      "nautical_science": -0.03448275862068961,
+      "occupational_therapy_for_psychological_disorders": -0.0423572744014733,
+      "official_document_management": -0.022522522522522515,
+      "optometry": -0.06739130434782609,
+      "organic_chemistry": -0.00917431192660545,
+      "pharmacology": -0.0433275563258233,
+      "pharmacy": -0.025575447570332477,
+      "physical_education": -0.06145251396648044,
+      "physics": 0.020618556701030966,
+      "politic_science": -0.05829145728643215,
+      "real_estate": 0.0,
+      "secondary_physics": -0.0357142857142857,
+      "statistics_and_machine_learning": -0.02678571428571419,
+      "taiwanese_hokkien": -0.038759689922480633,
+      "taxation": -0.058666666666666645,
+      "technical": -0.007462686567164201,
+      "three_principles_of_people": 0.043165467625899234,
+      "trade": -0.06573705179282868,
+      "traditional_chinese_medicine_clinical_medicine": -0.03237410071942437,
+      "trust_practice": -0.0598503740648379,
+      "ttqav2": -0.07964601769911506,
+      "tve_chinese_language": -0.0331262939958592,
+      "tve_design": -0.039583333333333304,
+      "tve_mathematics": -0.020000000000000018,
+      "tve_natural_sciences": -0.05660377358490565,
+      "veterinary_pathology": -0.07067137809187274,
+      "veterinary_pharmacology": -0.03888888888888886
+    }
+  },
+  "option_bias": {
+    "balanced_accuracy_base": 0.5936218294353126,
+    "balanced_accuracy_ft": 0.556073483416145,
+    "balanced_accuracy_delta": -0.03754834601916757,
+    "gold_marginal": {
+      "A": 5054,
+      "B": 5029,
+      "C": 5012,
+      "D": 5023
+    },
+    "base_pred_marginal": {
+      "A": 6255,
+      "B": 4868,
+      "C": 4349,
+      "D": 4645
+    },
+    "ft_pred_marginal": {
+      "A": 6610,
+      "B": 2922,
+      "C": 4052,
+      "D": 6534
+    },
+    "base_unparsed": 1,
+    "ft_unparsed": 0,
+    "accuracy_by_gold_letter": {
+      "A": {
+        "n": 5054,
+        "base_accuracy": 0.6630391768895924,
+        "ft_accuracy": 0.6578947368421053,
+        "delta": -0.005144440047487042
+      },
+      "B": {
+        "n": 5029,
+        "base_accuracy": 0.5814277192284748,
+        "ft_accuracy": 0.41280572678464905,
+        "delta": -0.16862199244382575
+      },
+      "C": {
+        "n": 5012,
+        "base_accuracy": 0.5538707102952913,
+        "ft_accuracy": 0.5,
+        "delta": -0.053870710295291335
+      },
+      "D": {
+        "n": 5023,
+        "base_accuracy": 0.5761497113278917,
+        "ft_accuracy": 0.653593470037826,
+        "delta": 0.07744375870993425
+      }
+    },
+    "delta_spread_across_gold_letters": 0.24606575115376,
+    "base_pred_vs_gold_tvd": 0.05971323844583648,
+    "ft_pred_vs_gold_tvd": 0.15245054180336015,
+    "chi2_base_vs_ft_pred_marginal": 825.6196305989897,
+    "chi2_df": 3,
+    "chi2_p_value": 1.2017946789340052e-178
+  }
+}

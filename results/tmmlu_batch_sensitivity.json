@@ -1,0 +1,77 @@
+{
+  "dir_a": "/home/tun2404/tmmlu_full/eval_raw",
+  "dir_b": "/home/tun2404/tmmlu_full_b/eval_raw",
+  "label_a": "max-batch-tokens 12288",
+  "label_b": "max-batch-tokens 6144",
+  "groups": {
+    "tmmlu_base": {
+      "n": 20118,
+      "pred_changed": 3,
+      "pred_changed_frac": 0.00014912019087384433,
+      "correct_changed": 1,
+      "correct_changed_frac": 4.970673029128144e-05,
+      "macro_a": 0.5936482844913634,
+      "macro_b": 0.5935617044047832,
+      "macro_shift": -8.658008658024574e-05,
+      "micro_a": 0.5937468933293568,
+      "micro_b": 0.5936971865990656,
+      "micro_shift": -4.970673029125461e-05,
+      "examples": [
+        {
+          "qid": "general_principles_of_law-26",
+          "gold": "A",
+          "pred_a": "C",
+          "pred_b": "D"
+        },
+        {
+          "qid": "accounting-123",
+          "gold": "D",
+          "pred_a": "C",
+          "pred_b": "B"
+        },
+        {
+          "qid": "junior_chinese_exam-163",
+          "gold": "B",
+          "pred_a": "B",
+          "pred_b": "A"
+        }
+      ]
+    },
+    "tmmlu_ft": {
+      "n": 20118,
+      "pred_changed": 3,
+      "pred_changed_frac": 0.00014912019087384433,
+      "correct_changed": 1,
+      "correct_changed_frac": 4.970673029128144e-05,
+      "macro_a": 0.5604246517401547,
+      "macro_b": 0.5604560213367418,
+      "macro_shift": 3.1369596587116355e-05,
+      "micro_a": 0.5562183119594393,
+      "micro_b": 0.5562680186897306,
+      "micro_shift": 4.970673029136563e-05,
+      "examples": [
+        {
+          "qid": "jce_humanities-5",
+          "gold": "B",
+          "pred_a": "A",
+          "pred_b": "D"
+        },
+        {
+          "qid": "trust_practice-145",
+          "gold": "A",
+          "pred_a": "C",
+          "pred_b": "D"
+        },
+        {
+          "qid": "tve_chinese_language-97",
+          "gold": "A",
+          "pred_a": "D",
+          "pred_b": "A"
+        }
+      ]
+    }
+  },
+  "delta_macro_a": -0.033223632751208765,
+  "delta_macro_b": -0.0331056830680414,
+  "delta_macro_shift": 0.0001179496831673621
+}
