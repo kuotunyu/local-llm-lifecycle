@@ -1,0 +1,96 @@
+{
+  "fixed_order": {
+    "tmmlu_base": {
+      "n": 20117,
+      "by_position": {
+        "A": 6255,
+        "B": 4868,
+        "C": 4349,
+        "D": 4645
+      },
+      "by_length_rank": {
+        "1": 5184,
+        "2": 4799,
+        "3": 4780,
+        "4": 5354
+      },
+      "mean_chosen_length": 13.57866481085649,
+      "position_chi2": 425.2826465178705,
+      "position_p": 7.384875687951721e-92,
+      "length_chi2": 48.625689715166274,
+      "length_p": 1.567146013316636e-10,
+      "position_spread_pp": 9.474573743599944,
+      "length_spread_pp": 2.8533081473380726
+    },
+    "tmmlu_ft": {
+      "n": 20118,
+      "by_position": {
+        "A": 6610,
+        "B": 2922,
+        "C": 4052,
+        "D": 6534
+      },
+      "by_length_rank": {
+        "1": 5279,
+        "2": 4238,
+        "3": 4879,
+        "4": 5722
+      },
+      "mean_chosen_length": 13.560343970573616,
+      "position_chi2": 2019.7958047519633,
+      "position_p": 0.0,
+      "length_chi2": 236.78874639626207,
+      "length_p": 4.708908415184799e-51,
+      "position_spread_pp": 18.33184213142459,
+      "length_spread_pp": 7.376478775226168
+    }
+  },
+  "permuted": {
+    "tmmlu_base": {
+      "n": 80439,
+      "by_position": {
+        "A": 24872,
+        "B": 19642,
+        "C": 17573,
+        "D": 18352
+      },
+      "by_length_rank": {
+        "1": 20570,
+        "2": 19133,
+        "3": 19457,
+        "4": 21279
+      },
+      "mean_chosen_length": 13.604333718718532,
+      "position_chi2": 1612.2826365320307,
+      "position_p": 0.0,
+      "length_chi2": 147.1474657815239,
+      "length_p": 1.0866061473868178e-31,
+      "position_spread_pp": 9.073956662812815,
+      "length_spread_pp": 2.6678601176046435
+    },
+    "tmmlu_ft": {
+      "n": 80440,
+      "by_position": {
+        "A": 26274,
+        "B": 11822,
+        "C": 16440,
+        "D": 25904
+      },
+      "by_length_rank": {
+        "1": 20816,
+        "2": 17361,
+        "3": 19586,
+        "4": 22677
+      },
+      "mean_chosen_length": 13.576342615614122,
+      "position_chi2": 7644.215614122327,
+      "position_p": 0.0,
+      "length_chi2": 741.8946792640477,
+      "length_p": 1.7270810438412533e-160,
+      "position_spread_pp": 17.966185977125804,
+      "length_spread_pp": 6.608652411735459
+    }
+  },
+  "ft_position_over_length_spread_ratio": 2.718585402558312,
+  "verdict": "偏誤主要綁在**位置**，不是選項長度"
+}
