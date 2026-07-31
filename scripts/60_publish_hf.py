@@ -62,9 +62,13 @@ RESULTS_TABLE = """\
 | 4 | 本 GGUF（Q8_0） | 0.9328 | 0.9706 | 100% |
 | 5 | 本 GGUF（Q4_K_M，部署建議） | 0.9330 | 0.9700 | 100% |
 
-n=4,699（DRCD 官方 dev split 完整題目，3,524 可回答 + 1,175 unanswerable）。
-量化幾乎沒有吃掉微調效果（組3→組5 EM 幾乎沒有下降）。詳細方法論、TMMLU+ forgetting
-check（全量 20,118 題，macro accuracy −3.32 個百分點）、錯誤案例分析見專案 EVAL_REPORT.md。\
+n=4,699（DRCD 官方 dev split 完整題目，3,524 可回答 + 1,175 unanswerable，未抽樣）。
+**量化最多吃掉微調增益的 0.65%**（EM，配對分層 bootstrap 的 95% CI 下界；點估計實際還
+微幅為正）。不過量化並非 no-op：Q4 有 2.68% 題目的答案文字與未量化不同，只是變好 33 題、
+變壞 35 題互相抵銷（McNemar p=0.90），所以整體指標看起來沒動。
+
+詳細方法論、TMMLU+ forgetting check（全量 20,118 題，macro accuracy −3.32 個百分點）、
+錯誤案例分析見專案 EVAL_REPORT.md。\
 """
 
 FORGETTING_NOTE = """\

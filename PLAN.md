@@ -106,6 +106,8 @@
 │   ├── 53_batch_sensitivity.py   # batch 組成敏感度（評測儀器本身的誤差）
 │   ├── 54_tmmlu_option_permutation.py   # 選項循環位移，實測偏誤有多少可校正
 │   ├── 54_test_option_permutation.py    # 上一支的驗證測試（含位移平均盲點的回歸測試）
+│   ├── 55_content_bias_check.py     # 拆開「位置偏誤」與「選項內容偏誤」
+│   ├── 56_drcd_paired_stats.py      # 第 3 節的配對檢定與等價界
 │   └── 60_publish_hf.py       # LoRA repo + GGUF repo 上傳（含 model card）
 ├── deploy/
 │   ├── Modelfile              # Ollama（手寫 Go TEMPLATE，不信任自動偵測）
@@ -499,9 +501,42 @@ Phase 3 實戰驗證：使用者不慎關閉整個瀏覽器（非演練），重
   **逐題結果零重複、零格式損壞**——`load_done_qids` 的斷點續跑機制在極端條件下驗證通過。
 
   **結論的邊界**：回收 45% 這個方向成立；但剩下的 1.9 pp **不能**反推為知識遺忘。
-  循環位移只打散字母／位置，不打散選項內容本身帶來的偏好（例如微調後偏好較短的選項），
-  那種內容型偏誤在這個設計裡完全沒被檢定。這是 §4.3 那個錯誤形狀的反方向版本，
-  已明確寫進報告的已知限制。
+  循環位移只打散字母／位置，不打散選項內容本身帶來的偏好（例如微調後偏好較短的選項）。
+  這是 §4.3 那個錯誤形狀的反方向版本，已明確寫進報告的已知限制。
+  （最可疑的那個內容維度已於同日補測，見下。）
+
+- **收尾補測與稽核（2026-07-31）**
+
+  1. **內容型偏誤檢定**（`55_content_bias_check.py`，零 GPU）。位移實驗的資料剛好能把
+     「位置」與「選項內容」拆開：每題四個選項輪流出現在四個位置，所以純位置偏誤在
+     「長度名次」上會呈現均勻分佈。實測 FT 的位置偏斜 18.0 pp vs 長度偏斜 6.6 pp
+     （2.7 倍），被選中選項的平均長度兩模型幾乎相同（13.604 vs 13.576 字元）——
+     「微調後偏好較短選項」不成立。但 FT 的長度偏斜（χ²(3)=742）確實大於 base 的 2.7 pp，
+     殘差是真的，只是小得多。報告寫成「排除長度這一維，不等於排除所有內容型偏誤」。
+
+  2. **第 3 節補上配對檢定與等價界**（`56_drcd_paired_stats.py`，零 GPU）。
+     §4 有完整統計，但扛整個論點的 §3 只有點估計加一句「在雜訊範圍內」，而那個雜訊
+     從沒被量過——null result 最容易被質疑的就是「你只是沒有檢定力」。
+     五組跑同一份 4,699 題、逐題 EM/F1 已落盤，配對分層 bootstrap（分層在 answerable 上）：
+     Q4 vs 未量化 Δ EM = +0.043 pp，95% CI [−0.30, +0.38] →
+     **量化最多吃掉微調增益的 0.65%（EM）／0.87%（F1）**。
+     順帶一個新發現：**量化不是 no-op**——Q4 有 126/4,699（2.68%）題的答案文字與 bf16
+     不同，只是變好 33 / 變壞 35 互相抵銷（McNemar p=0.90）。正確的說法是
+     「量化的影響沒有方向性」，不是「量化沒有影響」。
+
+  3. **稽核抓到的問題**（四個面向：可復現性、外部讀者視角、科學完整性、內部一致性）：
+     - `54_tmmlu_option_permutation.py` 的 `--out-dir` 預設值正是它自己 docstring 明文
+       禁止的 `results/eval_perm`，會覆蓋掉 `results/tmmlu_summary.json`。改預設值
+       並加硬性守衛（指向 results/ 底下直接 exit 1）。
+     - 一句話結論把 Q4 相對未量化的 EM 差寫成「掉不到 0.03 個百分點」——正負號反了
+       （實際是 +0.0426 pp）。另外 0.4574/0.2846 兩處四捨五入錯誤、0.0004 與 0.0005
+       兩種寫法並存，一併統一。
+     - 補 `requirements.txt`（版本逐一與實機核對）；README 新增「復現評估數字」一節。
+     - 提交 `results/eval_raw/tmmlu_testset.json`（2,000 題平衡子集）讓
+       `54_test_option_permutation.py` 在乾淨 clone 下就能跑。
+     - 修死連結：EVAL_REPORT 指向 PLAN 查 llama.cpp build commit 但 PLAN 全文沒有；
+       HF dataset card 結尾寫「README 待補」。
+     - README 首屏改成三列宣稱表，把兩次自我推翻搬到最前面。
 
 ### Phase 6：HF 發佈 + 文件定稿 ✅ 完成
 - `60_publish_hf.py`：LoRA repo + GGUF repo 轉正（完整 card：訓練細節、評估數據、用法（transformers / llama.cpp / Ollama / LM Studio）、Apache-2.0 權重授權、DRCD CC BY-SA 歸屬與引用、基底模型歸屬）；SFT dataset 轉 public（CC BY-SA 4.0）
