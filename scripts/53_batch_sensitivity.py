@@ -13,7 +13,17 @@ n=200 的先導實測裡，光是把固定 batch=16 換成長度排序的動態 
 量出儀器誤差的量級，讓「Δ = −X.X pp」這句話能同時交代兩種誤差來源。
 
 用法：
-  python3 53_batch_sensitivity.py --dir-a results/eval_raw --dir-b results/eval_batch_b
+  # 用已進 git 的資料重算（clone 後即可跑，不需要 GPU）
+  python3 53_batch_sensitivity.py \
+      --compact-b results/eval_perm/batch6144_predictions.jsonl
+
+  # 或指定兩個原始結果目錄
+  python3 53_batch_sensitivity.py --dir-a results/eval_raw --dir-b ~/tmmlu_batch_b/eval_raw
+
+對照組（`--max-batch-tokens 6144`）的逐題預測以緊湊格式入庫：一行一題
+`{"qid":...,"base":"B","ft":"D"}`，約 0.9 MB 取代 5.6 MB 的原始輸出。
+gold_answer 與 subject 跟 A 組完全相同（同一份考卷），correct 由兩者比對得到，
+所以只需要記「每題兩個模型各答什麼」。A 組就是主實驗的結果，本來就在 git 裡。
 """
 
 from __future__ import annotations
@@ -28,8 +38,45 @@ def load(path: Path) -> dict[str, dict]:
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.strip():
             r = json.loads(line)
+            if r["qid"] in rows:
+                raise ValueError(f"{path.name} 有重複 qid：{r['qid']}（斷點續跑重複寫入？）")
             rows[r["qid"]] = r
     return rows
+
+
+def load_compact_b(path: Path, ref: dict[str, dict[str, dict]]) -> dict[str, dict[str, dict]]:
+    """讀對照組的緊湊逐題預測，補回 gold/subject/correct 後回傳跟 load() 同樣的結構。
+
+    對照組只需要記「每題兩個模型各答什麼」——gold_answer 與 subject 跟 A 組完全相同
+    （同一份考卷），correct 由兩者比對得到。所以緊湊格式一行一題：
+        {"qid":"accounting-0","base":"B","ft":"D"}
+    約 0.9 MB，取代 5.6 MB 的原始輸出。ref 是已進 git 的 A 組結果，用來取 gold 與 subject。
+    """
+    out: dict[str, dict[str, dict]] = {g: {} for g in ref}
+    seen = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        qid = r["qid"]
+        if qid in seen:
+            raise ValueError(f"{path.name} 有重複 qid：{qid}")
+        seen.add(qid)
+        for group, key in (("tmmlu_base", "base"), ("tmmlu_ft", "ft")):
+            a = ref[group].get(qid)
+            if a is None:
+                raise ValueError(f"{qid} 不在 A 組結果裡，兩組考卷不一致？")
+            pred = r[key] or None
+            if pred == "?":
+                pred = None
+            out[group][qid] = {
+                "qid": qid,
+                "subject": a["subject"],
+                "gold_answer": a["gold_answer"],
+                "pred_answer": pred,
+                "correct": pred == a["gold_answer"],
+            }
+    return out
 
 
 def macro_micro(rows: dict[str, dict]) -> tuple[float, float]:
@@ -42,8 +89,7 @@ def macro_micro(rows: dict[str, dict]) -> tuple[float, float]:
     return macro, micro
 
 
-def compare_group(a_path: Path, b_path: Path, group: str) -> dict:
-    a, b = load(a_path), load(b_path)
+def compare_group(a: dict, b: dict, group: str) -> dict:
     if set(a) != set(b):
         raise ValueError(f"{group}：兩邊 qid 集合不同，無法逐題比對"
                          f"（A 獨有 {len(set(a)-set(b))}、B 獨有 {len(set(b)-set(a))}）")
@@ -70,21 +116,36 @@ def compare_group(a_path: Path, b_path: Path, group: str) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dir-a", required=True, help="第一組 batch 設定的結果目錄")
-    parser.add_argument("--dir-b", required=True, help="第二組 batch 設定的結果目錄")
-    parser.add_argument("--label-a", default="A")
-    parser.add_argument("--label-b", default="B")
+    parser.add_argument("--dir-a", default="results/eval_raw",
+                        help="第一組 batch 設定的結果目錄（預設用已進 git 的主實驗結果）")
+    parser.add_argument("--dir-b", default=None, help="第二組 batch 設定的結果目錄")
+    parser.add_argument("--compact-b", default=None,
+                        help="第二組的緊湊逐題預測（已進 git："
+                             "results/eval_perm/batch6144_predictions.jsonl）；與 --dir-b 擇一")
+    parser.add_argument("--label-a", default="max-batch-tokens 12288")
+    parser.add_argument("--label-b", default="max-batch-tokens 6144")
     parser.add_argument("--out", default=None, help="輸出 JSON 路徑（預設不寫檔）")
     args = parser.parse_args()
 
-    a_dir, b_dir = Path(args.dir_a), Path(args.dir_b)
-    result = {"dir_a": str(a_dir), "dir_b": str(b_dir),
+    if not args.dir_b and not args.compact_b:
+        parser.error("要給 --dir-b 或 --compact-b")
+
+    a_dir = Path(args.dir_a).expanduser()
+    a = {g: load(a_dir / f"{g}.jsonl") for g in ("tmmlu_base", "tmmlu_ft")}
+
+    if args.compact_b:
+        b = load_compact_b(Path(args.compact_b).expanduser(), a)
+        b_desc = str(args.compact_b)
+    else:
+        b_dir = Path(args.dir_b).expanduser()
+        b = {g: load(b_dir / f"{g}.jsonl") for g in ("tmmlu_base", "tmmlu_ft")}
+        b_desc = str(b_dir)
+
+    result = {"dir_a": str(a_dir), "dir_b": b_desc,
               "label_a": args.label_a, "label_b": args.label_b, "groups": {}}
 
     for group in ("tmmlu_base", "tmmlu_ft"):
-        result["groups"][group] = compare_group(
-            a_dir / f"{group}.jsonl", b_dir / f"{group}.jsonl", group
-        )
+        result["groups"][group] = compare_group(a[group], b[group], group)
 
     print(f"\n===== batch 組成敏感度（{args.label_a} vs {args.label_b}）=====")
     for group, g in result["groups"].items():

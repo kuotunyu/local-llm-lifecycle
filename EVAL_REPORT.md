@@ -477,8 +477,16 @@ n=80,440，零 GPU）：
   第二列只是同一策略下調預算，batch 組成相似得多，所以位移小是預期內的。
   **全量規模下的「固定 batch vs 動態 batch」沒有實測**——固定 batch=16 在全量長題目上
   直接 OOM，跑不起來。所以「0.01 pp」只能宣稱在動態 batch 這一族內成立。
-  對照組（`6144`）的逐題輸出沒有進 git（只留比較結果 `results/tmmlu_batch_sensitivity.json`）；
-  要複現就是同一條指令加 `--max-batch-tokens 6144` 換一個輸出目錄再跑一次。
+  對照組（`6144`）的逐題預測**已以緊湊格式進 git**
+  （`results/eval_perm/batch6144_predictions.jsonl`，0.99 MB，每題兩個字母）：
+
+  ```bash
+  python3 scripts/53_batch_sensitivity.py --compact-b results/eval_perm/batch6144_predictions.jsonl
+  ```
+
+  clone 後即可重算，不需要 GPU。這份對照組其實是先刪掉原始輸出、再重跑一次重建的，
+  結果與先前發表的數字**完全相同**（15 個量、0 差異，連改變預測的 3 個 qid 身份都一樣）
+  ——順帶證明了推論在固定 batch 設定下確實是決定性的。
   > 先前版本在這一節寫「效能異常只拖慢速度，不改變 greedy decoding 的運算結果」——
   > **那句話只在 batch 組成不變時成立**，已於 2026-07-30 更正。
 - **評估腳本效能踩雷**：`base_fewshot` 組第一次跑撞到固定 batch size 在長 prompt 下的顯存碎片化

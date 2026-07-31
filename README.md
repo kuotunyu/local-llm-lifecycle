@@ -181,17 +181,25 @@ python3 scripts/51_eval_tmmlu.py --full --groups all --base-model unsloth/Qwen3-
 | TMMLU+ 配對檢定與 CI | `52_tmmlu_paired_stats.py --out-dir results/eval_raw` | **可以**（逐題結果已進 git） |
 | 選項位移校正（§4.4） | `54_tmmlu_option_permutation.py --analyze --compact results/eval_perm/permutation_predictions.jsonl` | **可以**（緊湊逐題預測已進 git） |
 | DRCD 等價界（§3.1–3.2） | `56_drcd_paired_stats.py --eval-dir results/eval_raw` | **可以**（五組逐題結果已進 git） |
+| batch 組成敏感度（§6） | `53_batch_sensitivity.py --compact-b results/eval_perm/batch6144_predictions.jsonl` | **可以**（對照組逐題預測已進 git） |
 | 位置 vs 內容長度偏誤（§4.5） | `55_content_bias_check.py --compact …` | 需先重建考卷（無 GPU，一行指令） |
-| batch 組成敏感度 | `53_batch_sensitivity.py --dir-a … --dir-b …` | 需先自行跑第二組 batch 設定 |
 | TMMLU+ 全量推論 | `51_eval_tmmlu.py --full` | 需 GPU（約 15 分） |
 | 選項位移全量推論 | `54_…py --build` 後接 `51_…py --full` | 需 GPU（約 45 分） |
 | DRCD 五組對照 | `50_eval_qa.py --groups all` | 需 GPU |
 
-位移實驗的逐題預測以**緊湊格式**進 git（`results/eval_perm/permutation_predictions.jsonl`，
-1.3 MB）：一行一題，`base` / `ft` 各是 4 個字元，第 k 個字元＝該模型在位移 k 上答的位置字母。
-原始輸出是 22.1 MB，但其中大半是重複的 JSON key 名稱與可推導欄位（subject 可從 qid 推出、
-位移 k 的 gold 可從原始 gold 推出、correct 可由兩者比對），壓縮 16.8 倍後對下游統計**無損**
-——實測從緊湊格式重算 §4.4 與 §4.5，與原始檔的輸出**逐欄完全相同**。
+補充實驗的逐題預測都以**緊湊格式**進 git，因為原始輸出的體積幾乎全是重複的 JSON key 名稱與
+可推導欄位（subject 可從 qid 推出、位移 k 的 gold 可從原始 gold 推出、correct 可由兩者比對、
+raw_output 下游用不到）：
+
+| 檔案 | 內容 | 原始 → 緊湊 |
+|---|---|---|
+| `results/eval_perm/permutation_predictions.jsonl` | 選項位移實驗（§4.4/§4.5），`base`/`ft` 各 4 字元 | 22.1 MB → **1.3 MB** |
+| `results/eval_perm/batch6144_predictions.jsonl` | batch 對照組（§6），`base`/`ft` 各 1 字元 | 5.4 MB → **1.0 MB** |
+
+兩者都**逐欄驗證過無損**：從緊湊格式重算 §4.4、§4.5、§6，與原始檔算出的結果完全相同。
+§6 的對照組甚至是刪掉原始檔後重跑重建的，三方（已發表數字／重跑結果／緊湊格式）
+15 個量全部一致，連改變預測的那 3 個 qid 身份都相同——這順帶證明了推論在固定 batch 設定下
+是決定性的。
 
 最快確認這個 repo 的統計不是空話：clone 下來直接跑
 
