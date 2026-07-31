@@ -62,6 +62,14 @@
   python3 54_tmmlu_option_permutation.py --analyze --out-dir ~/tmmlu_perm/eval_raw \
       --stats-path results/tmmlu_option_permutation.json
 
+  # 3'. 或直接用已進 git 的緊湊逐題預測重算（1.3 MB，跳過上面兩步、不需要 GPU）
+  python3 54_tmmlu_option_permutation.py --analyze \
+      --compact results/eval_perm/permutation_predictions.jsonl
+
+緊湊格式：一行一題 `{"qid":..., "gold":"B", "base":"BCDA", "ft":"BCDA"}`，
+base/ft 的第 k 個字元＝該模型在位移 k 上答的位置字母。原始輸出 22.1 MB，
+壓縮 16.8 倍後對下游統計無損（實測重算結果逐欄相同）。
+
 **--out-dir 不要指到 results/ 底下。** `51_eval_tmmlu.py` 會把彙總寫到
 `out_dir.parent / "tmmlu_summary.json"`，若 out-dir 是 `results/eval_perm`，
 就會用一份「對 80,440 列彙總、看起來很合理但定義完全不同」的檔案覆蓋掉
@@ -171,6 +179,39 @@ def load_predictions(path: Path) -> dict[tuple[str, int], str | None]:
             raise ValueError(f"{path.name} 有重複的 (qid, 位移)：{key}（斷點續跑重複寫入？）")
         out[key] = r["pred_answer"]
     return out
+
+
+def load_compact(path: Path) -> tuple[dict, dict[str, dict]]:
+    """讀緊湊格式，回傳 (mapping, {group: preds})。
+
+    緊湊格式一行一題：`{"qid":..., "gold":"B", "base":"BCDA", "ft":"BCDA"}`
+    base/ft 是 4 個字元，第 k 個字元 = 該模型在位移 k 上答的**位置字母**，'?' 代表沒解析出 A-D。
+
+    原始的兩個 jsonl 共 22.1 MB，但其中大半是重複的 JSON key 名稱與可推導欄位：
+    subject 可從 qid 推出、位移 k 的 gold 可從原始 gold 推出、correct 可由兩者比對得到、
+    raw_output 下游用不到。壓成這個格式是 1.3 MB，對所有下游統計無損，才能進 git。
+    """
+    mapping: dict[str, dict] = {}
+    preds: dict[str, dict] = {"tmmlu_base": {}, "tmmlu_ft": {}}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        qid, gold = r["qid"], r["gold"]
+        if qid in mapping:
+            raise ValueError(f"{path.name} 有重複 qid：{qid}")
+        mapping[qid] = {
+            "subject": qid.rsplit("-", 1)[0],   # qid = "<科目>-<test split 列序>"
+            "gold_answer": gold,
+            "gold_index": LETTERS.index(gold),
+        }
+        for group, key in (("tmmlu_base", "base"), ("tmmlu_ft", "ft")):
+            s = r[key]
+            if len(s) != N_PERM:
+                raise ValueError(f"{qid} 的 {key} 應該有 {N_PERM} 個字元，得到 {s!r}")
+            for k, ch in enumerate(s):
+                preds[group][(qid, k)] = None if ch == "?" else ch
+    return mapping, preds
 
 
 def score_group(preds: dict, mapping: dict) -> dict:
@@ -333,16 +374,23 @@ def bootstrap_deltas(base_items: dict, ft_items: dict,
     return out
 
 
-def analyze(out_dir: Path, stats_path: Path | None, allow_incomplete: bool = False) -> None:
-    mapping = json.loads((out_dir / "perm_map.json").read_text(encoding="utf-8"))["items"]
+def analyze(out_dir: Path, stats_path: Path | None, allow_incomplete: bool = False,
+            compact: Path | None = None) -> None:
+    if compact is not None:
+        # 緊湊格式：已進 git 的 1.3 MB 版本，clone 後即可重算 §4.4 與 §4.5
+        mapping, loaded = load_compact(compact)
+        print(f"資料來源：{compact}（緊湊格式，{len(mapping):,} 題）")
+    else:
+        mapping = json.loads((out_dir / "perm_map.json").read_text(encoding="utf-8"))["items"]
+        loaded = {}
+        for group in ("tmmlu_base", "tmmlu_ft"):
+            p = out_dir / f"{group}.jsonl"
+            if not p.exists():
+                raise FileNotFoundError(
+                    f"缺少 {p}。改用已進 git 的緊湊格式："
+                    f"--compact results/eval_perm/permutation_predictions.jsonl")
+            loaded[group] = load_predictions(p)
     result = {"n_original_items": len(mapping), "groups": {}}
-
-    loaded = {}
-    for group in ("tmmlu_base", "tmmlu_ft"):
-        p = out_dir / f"{group}.jsonl"
-        if not p.exists():
-            raise FileNotFoundError(f"缺少 {p}，先跑 51_eval_tmmlu.py")
-        loaded[group] = load_predictions(p)
 
     # 只保留「兩組都有完整 4 個位移」的題目。
     #
@@ -440,6 +488,9 @@ def main() -> None:
     # 也就是 README、EVAL_REPORT §4、PLAN 與兩張 HF model card 背後的那份正式結果。
     parser.add_argument("--out-dir", default="~/tmmlu_perm/eval_raw")
     parser.add_argument("--stats-path", default="results/tmmlu_option_permutation.json")
+    parser.add_argument("--compact",
+                        help="改讀緊湊格式的逐題預測"
+                             "（results/eval_perm/permutation_predictions.jsonl，已進 git）")
     parser.add_argument("--allow-incomplete", action="store_true",
                         help="容許推論尚未跑完就分析（結果不可信，只供中途觀察）")
     args = parser.parse_args()
@@ -466,7 +517,8 @@ def main() -> None:
         build(Path(args.src), out_dir)
     elif args.analyze:
         analyze(out_dir, Path(args.stats_path) if args.stats_path else None,
-                allow_incomplete=args.allow_incomplete)
+                allow_incomplete=args.allow_incomplete,
+                compact=Path(args.compact).expanduser() if args.compact else None)
     else:
         parser.error("要 --build 或 --analyze")
 

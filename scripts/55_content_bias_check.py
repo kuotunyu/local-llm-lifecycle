@@ -17,8 +17,14 @@
   # 只用主實驗（固定順序）的資料
   python3 55_content_bias_check.py --eval-dir results/eval_raw
 
-  # 加上位移實驗的資料（決定性的那一半）
-  python3 55_content_bias_check.py --eval-dir results/eval_raw --perm-dir ~/tmmlu_perm/eval_raw
+  # 加上位移實驗的資料（決定性的那一半）。兩種來源結果相同：
+  #   --compact  已進 git 的緊湊逐題預測（1.3 MB，推薦）
+  #   --perm-dir 原始的 22 MB 輸出目錄（未進 git）
+  python3 55_content_bias_check.py --eval-dir results/eval_raw \
+      --compact results/eval_perm/permutation_predictions.jsonl
+
+位移後的選項長度是**推導**出來的，不需要那份 35 MB 的位移考卷：位移是決定性的，
+位移 k 時位置 i 放的是原始第 (i-k) mod 4 個選項，所以有原始考卷就夠了。
 """
 
 from __future__ import annotations
@@ -56,6 +62,43 @@ def length_rank(opts: list[str], chosen_idx: int) -> int:
     """被選中的選項在四個選項裡的長度名次（1 = 最短，4 = 最長）。"""
     order = sorted(range(len(opts)), key=lambda i: (len(opts[i]), i))
     return order.index(chosen_idx) + 1
+
+
+def profile_from_compact(sample: dict, compact_path: Path, key: str) -> dict:
+    """用「原始考卷 + 緊湊預測」重建位移實驗的統計，不需要 35 MB 的位移後考卷。
+
+    位移是決定性的：位移 k 時，位置 i 放的是原始第 (i-k) mod 4 個選項。
+    所以只要有原始選項內容與 k，就能算出模型選中的那個選項有多長，
+    不必把 4 倍大的置換考卷實體化出來（也就不必進 git）。
+    """
+    by_pos: Counter = Counter()
+    by_len: Counter = Counter()
+    chosen_lens: list[int] = []
+
+    for line in compact_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        row = sample.get(r["qid"])
+        if row is None:
+            continue
+        orig = [str(row[x]) for x in LETTERS]
+        for k, ch in enumerate(r[key]):
+            if ch == "?":
+                continue
+            pos = LETTERS.index(ch)
+            # 位移 k 下，位置 pos 放的是原始第 (pos-k)%4 個選項
+            opts_at_positions = [orig[(i - k) % len(LETTERS)] for i in range(len(LETTERS))]
+            by_pos[ch] += 1
+            by_len[length_rank(opts_at_positions, pos)] += 1
+            chosen_lens.append(len(opts_at_positions[pos]))
+
+    return {
+        "n": len(chosen_lens),
+        "by_position": {k: by_pos[k] for k in LETTERS},
+        "by_length_rank": {k: by_len[k] for k in (1, 2, 3, 4)},
+        "mean_chosen_length": sum(chosen_lens) / len(chosen_lens) if chosen_lens else 0.0,
+    }
 
 
 def profile(sample: dict, preds: list[dict]) -> dict:
@@ -113,7 +156,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--eval-dir", default="results/eval_raw")
     ap.add_argument("--perm-dir", default=None,
-                    help="位移實驗的結果目錄（決定性的那一半）")
+                    help="位移實驗的原始結果目錄（22 MB，未進 git）")
+    ap.add_argument("--compact", default=None,
+                    help="位移實驗的緊湊逐題預測（已進 git，1.3 MB）"
+                         "；與 --perm-dir 擇一，結果相同")
     ap.add_argument("--out", default="results/tmmlu_content_bias.json")
     args = ap.parse_args()
 
@@ -134,17 +180,23 @@ def main() -> None:
     for g in ("tmmlu_base", "tmmlu_ft"):
         out["fixed_order"][g] = report(g, profile(sample, load_jsonl(ev / f"{g}.jsonl")))
 
-    if args.perm_dir:
-        pd = Path(args.perm_dir).expanduser()
-        psample = {r["qid"]: r for r in json.loads(
-            (pd / "tmmlu_sample.json").read_text(encoding="utf-8"))}
+    if args.compact or args.perm_dir:
         print()
         print("=" * 74)
         print("B. 位移實驗（決定性）：位置與長度已被拆開")
         print("=" * 74)
         out["permuted"] = {}
-        for g in ("tmmlu_base", "tmmlu_ft"):
-            out["permuted"][g] = report(g, profile(psample, load_jsonl(pd / f"{g}.jsonl")))
+        if args.compact:
+            cp = Path(args.compact).expanduser()
+            print(f"  資料來源：{cp}（緊湊格式；位移後的選項長度由原始考卷推導）")
+            for g, key in (("tmmlu_base", "base"), ("tmmlu_ft", "ft")):
+                out["permuted"][g] = report(g, profile_from_compact(sample, cp, key))
+        else:
+            pd = Path(args.perm_dir).expanduser()
+            psample = {r["qid"]: r for r in json.loads(
+                (pd / "tmmlu_sample.json").read_text(encoding="utf-8"))}
+            for g in ("tmmlu_base", "tmmlu_ft"):
+                out["permuted"][g] = report(g, profile(psample, load_jsonl(pd / f"{g}.jsonl")))
 
         ft = out["permuted"]["tmmlu_ft"]
         ratio = ft["position_spread_pp"] / ft["length_spread_pp"] if ft["length_spread_pp"] else float("inf")
