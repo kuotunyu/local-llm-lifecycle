@@ -9,6 +9,7 @@
   3. SFT dataset repo：訓練期 private → 轉 public（CC BY-SA 4.0，卡片沿用 Phase 1 已寫好的版本）
 
 用法：
+  # 完整發佈（會上傳權重）
   python3 60_publish_hf.py \
       --adapter-dir work/adapter \
       --gguf-q8 work/gguf/qwen3-8b-drcd-qa-Q8_0.gguf \
@@ -16,6 +17,15 @@
       --lora-repo steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA \
       --gguf-repo steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF \
       --dataset-repo steven0226/drcd-zhtw-extractive-qa-sft
+
+  # 只改卡片數字（不上傳權重）——例如 TMMLU+ 重跑後更新 FORGETTING_NOTE
+  python3 60_publish_hf.py --cards-only --dry-run \
+      --lora-repo steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA \
+      --gguf-repo steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF \
+      --dataset-repo steven0226/drcd-zhtw-extractive-qa-sft
+
+**不要為了改卡片而重跑完整發佈**：`publish_lora()` 會 upload_folder 整個 adapter 目錄，
+`publish_gguf()` 會重傳 Q8_0（~8.7 GB）+ Q4_K_M（~5.0 GB）。改數字請一律走 `--cards-only`。
 """
 
 from __future__ import annotations
@@ -28,6 +38,10 @@ from huggingface_hub import HfApi
 BASE_MODEL = "unsloth/Qwen3-8B"
 OFFICIAL_BASE_MODEL = "Qwen/Qwen3-8B"
 LLAMA_CPP_COMMIT = "a5822222909b785f23ddc74ce3c8f85bd0e38562"
+
+# GGUF 卡片文字裡會出現的檔名。--cards-only 模式沒有本機檔案可以推導，用這個當預設。
+DEFAULT_Q8_FILENAME = "qwen3-8b-drcd-qa-Q8_0.gguf"
+DEFAULT_Q4_FILENAME = "qwen3-8b-drcd-qa-Q4_K_M.gguf"
 
 SYSTEM_PROMPT = (
     "你是精確的閱讀理解助手。根據「文章」回答「問題」：\n"
@@ -50,14 +64,22 @@ RESULTS_TABLE = """\
 
 n=4,699（DRCD 官方 dev split 完整題目，3,524 可回答 + 1,175 unanswerable）。
 量化幾乎沒有吃掉微調效果（組3→組5 EM 幾乎沒有下降）。詳細方法論、TMMLU+ forgetting
-check（macro accuracy 掉 12.25 個百分點）、錯誤案例分析見專案 EVAL_REPORT.md。\
+check（全量 20,118 題，macro accuracy −3.32 個百分點）、錯誤案例分析見專案 EVAL_REPORT.md。\
 """
 
 FORGETTING_NOTE = """\
-> **已知限制**：這個 checkpoint 在 DRCD 抽取式 QA 上表現接近滿分，但 TMMLU+（通用知識選擇題）
-> macro accuracy 從原廠的 0.630 掉到 0.508（−12.25 個百分點），確認存在明顯的
-> catastrophic forgetting。如果需要保留通用能力，建議：(a) 只在需要精確抽取式 QA 的場景使用
-> 這個 adapter，(b) 或參考本專案方法論自行用較低 epoch / 加入通用資料混合訓練。\
+> **已知限制**：這個 checkpoint 在 DRCD 抽取式 QA 上表現接近滿分，代價是通用能力小幅退步。
+> TMMLU+（通用知識選擇題）**test split 全量 20,118 題**上，macro accuracy 從原廠的 0.5936
+> 掉到 0.5604（**Δ = −3.32 個百分點，95% CI [−3.96, −2.69]**，配對分層 bootstrap）。
+>
+> 退步的型態是**選項偏誤**而不是知識遺忘：微調後模型選 B 的次數比原廠少 1,946 次、選 D 多
+> 1,889 次，於是 gold 為 B 的題目掉 16.9 個百分點，而 **gold 為 D 的題目反而進步 7.7 個
+> 百分點**。這代表相當一部分退步是可以靠 decoding 端校正的（把選項順序隨機化後多數投票、
+> 或調整字母 prior），不是能力永久損失——但本專案只做了診斷，**沒有實測校正後的數字**。
+>
+> 如果需要保留通用能力，建議：(a) 只在需要精確抽取式 QA 的場景使用這個 adapter，
+> (b) 選擇題場景加上選項順序隨機化的多數投票，(c) 或參考本專案方法論自行用較低 epoch /
+> 加入通用資料混合訓練。\
 """
 
 LORA_CARD = """\
@@ -144,8 +166,9 @@ print(tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_token
   [{dataset_repo}](https://huggingface.co/datasets/{dataset_repo})
 - 基底模型 `{base_model}` 授權 Apache-2.0，歸屬 Qwen team / unsloth
 
-完整專案（Colab QLoRA → 本機合併/量化 → Ollama/LM Studio 部署 → 五組評估）：見對應
-GitHub repo（README/DESIGN 定稿）。
+完整專案（Colab QLoRA → 本機合併/量化 → Ollama/LM Studio 部署 → 五組評估 + TMMLU+ 全量
+forgetting check）：<https://github.com/kuotunyu/local-llm-lifecycle>
+（方法論與逐 Phase 實作紀錄見 `PLAN.md`，完整評估報告見 `EVAL_REPORT.md`）。
 """
 
 GGUF_CARD = """\
@@ -240,24 +263,17 @@ context length=4096。
 - 基底模型 `{base_model}` 授權 Apache-2.0，歸屬 Qwen team / unsloth
 - 未量化 LoRA adapter：[{lora_repo}](https://huggingface.co/{lora_repo})
 
-完整專案（Colab QLoRA → 本機合併/量化 → Ollama/LM Studio 部署 → 五組評估）：見對應
-GitHub repo（README/DESIGN 定稿）。
+完整專案（Colab QLoRA → 本機合併/量化 → Ollama/LM Studio 部署 → 五組評估 + TMMLU+ 全量
+forgetting check）：<https://github.com/kuotunyu/local-llm-lifecycle>
+（方法論與逐 Phase 實作紀錄見 `PLAN.md`，完整評估報告見 `EVAL_REPORT.md`）。
 """
 
 
 def publish_lora(api: HfApi, repo_id: str, adapter_dir: Path, gguf_repo: str, dataset_repo: str) -> None:
     print(f"建立/確認 LoRA repo：{repo_id}（public）")
     api.create_repo(repo_id=repo_id, repo_type="model", private=False, exist_ok=True)
-    card = LORA_CARD.format(
-        base_model=BASE_MODEL,
-        official_base_model=OFFICIAL_BASE_MODEL,
-        lora_repo=repo_id,
-        gguf_repo=gguf_repo,
-        dataset_repo=dataset_repo,
-        results_table=RESULTS_TABLE,
-        forgetting_note=FORGETTING_NOTE,
-        system_prompt=SYSTEM_PROMPT,
-    )
+    card, _ = render_cards(repo_id, gguf_repo, dataset_repo,
+                           DEFAULT_Q8_FILENAME, DEFAULT_Q4_FILENAME)
     (adapter_dir / "README.md").write_text(card, encoding="utf-8")
     print(f"上傳 adapter 檔案：{adapter_dir} -> {repo_id}")
     api.upload_folder(
@@ -272,17 +288,7 @@ def publish_lora(api: HfApi, repo_id: str, adapter_dir: Path, gguf_repo: str, da
 def publish_gguf(api: HfApi, repo_id: str, gguf_q8: Path, gguf_q4: Path, lora_repo: str, dataset_repo: str) -> None:
     print(f"建立/確認 GGUF repo：{repo_id}（public）")
     api.create_repo(repo_id=repo_id, repo_type="model", private=False, exist_ok=True)
-    card = GGUF_CARD.format(
-        base_model=BASE_MODEL,
-        lora_repo=lora_repo,
-        dataset_repo=dataset_repo,
-        q8_filename=gguf_q8.name,
-        q4_filename=gguf_q4.name,
-        llama_cpp_commit=LLAMA_CPP_COMMIT,
-        results_table=RESULTS_TABLE,
-        forgetting_note=FORGETTING_NOTE,
-        system_prompt=SYSTEM_PROMPT,
-    )
+    _, card = render_cards(lora_repo, repo_id, dataset_repo, gguf_q8.name, gguf_q4.name)
     card_path = gguf_q8.parent / "README.md"
     card_path.write_text(card, encoding="utf-8")
     api.upload_file(
@@ -299,6 +305,74 @@ def publish_gguf(api: HfApi, repo_id: str, gguf_q8: Path, gguf_q4: Path, lora_re
     print(f"GGUF repo 發佈完成：https://huggingface.co/{repo_id}")
 
 
+def render_cards(lora_repo: str, gguf_repo: str, dataset_repo: str,
+                 q8_filename: str, q4_filename: str) -> tuple[str, str]:
+    """把兩張 model card 算出來，不做任何上傳。"""
+    lora = LORA_CARD.format(
+        base_model=BASE_MODEL,
+        official_base_model=OFFICIAL_BASE_MODEL,
+        lora_repo=lora_repo,
+        gguf_repo=gguf_repo,
+        dataset_repo=dataset_repo,
+        results_table=RESULTS_TABLE,
+        forgetting_note=FORGETTING_NOTE,
+        system_prompt=SYSTEM_PROMPT,
+    )
+    gguf = GGUF_CARD.format(
+        base_model=BASE_MODEL,
+        lora_repo=lora_repo,
+        dataset_repo=dataset_repo,
+        q8_filename=q8_filename,
+        q4_filename=q4_filename,
+        llama_cpp_commit=LLAMA_CPP_COMMIT,
+        results_table=RESULTS_TABLE,
+        forgetting_note=FORGETTING_NOTE,
+        system_prompt=SYSTEM_PROMPT,
+    )
+    return lora, gguf
+
+
+def update_cards_only(api: HfApi, lora_repo: str, gguf_repo: str, dataset_repo: str,
+                      q8_filename: str, q4_filename: str, commit_message: str,
+                      dry_run: bool = False) -> None:
+    """只重寫兩個 repo 的 README.md，**不碰權重**。
+
+    存在的理由：`publish_lora()` 會 `upload_folder()` 整個 adapter 目錄、`publish_gguf()`
+    會重傳 Q8_0（~8.7 GB）+ Q4_K_M（~5.0 GB）。當改動只是卡片上的數字（例如 TMMLU+
+    重跑後更新 FORGETTING_NOTE），沒有理由重傳 13.7 GB。
+
+    需要有效的 HF token（`hf auth login`）。
+    """
+    import tempfile
+
+    lora_card, gguf_card = render_cards(lora_repo, gguf_repo, dataset_repo, q8_filename, q4_filename)
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        targets = [(lora_repo, lora_card), (gguf_repo, gguf_card)]
+        for repo_id, card in targets:
+            path = tmp / f"{repo_id.replace('/', '__')}__README.md"
+            path.write_text(card, encoding="utf-8")
+            if dry_run:
+                print(f"[dry-run] 會上傳 README.md -> {repo_id}（{len(card):,} 字元）")
+                print("-" * 70)
+                print(card[:600] + ("\n...(略)" if len(card) > 600 else ""))
+                print("-" * 70)
+                continue
+            print(f"上傳 README.md -> {repo_id}")
+            api.upload_file(
+                path_or_fileobj=str(path),
+                path_in_repo="README.md",
+                repo_id=repo_id,
+                repo_type="model",
+                commit_message=commit_message,
+            )
+    if not dry_run:
+        print("\n兩張 model card 已更新（沒有重傳任何權重檔）：")
+        print(f"  https://huggingface.co/{lora_repo}")
+        print(f"  https://huggingface.co/{gguf_repo}")
+
+
 def publish_dataset(api: HfApi, repo_id: str) -> None:
     print(f"將 dataset repo 轉為 public：{repo_id}")
     api.update_repo_visibility(repo_id=repo_id, repo_type="dataset", private=False)
@@ -307,16 +381,39 @@ def publish_dataset(api: HfApi, repo_id: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--adapter-dir", required=True)
-    parser.add_argument("--gguf-q8", required=True)
-    parser.add_argument("--gguf-q4", required=True)
+    parser.add_argument("--adapter-dir")
+    parser.add_argument("--gguf-q8")
+    parser.add_argument("--gguf-q4")
     parser.add_argument("--lora-repo", required=True)
     parser.add_argument("--gguf-repo", required=True)
     parser.add_argument("--dataset-repo", required=True)
     parser.add_argument("--skip-lora", action="store_true")
     parser.add_argument("--skip-gguf", action="store_true")
     parser.add_argument("--skip-dataset", action="store_true")
+    parser.add_argument("--cards-only", action="store_true",
+                        help="只重寫兩個 repo 的 README.md，不上傳任何權重（改卡片數字時用這個）")
+    parser.add_argument("--commit-message", default="docs: update model card",
+                        help="--cards-only 的 commit 訊息")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="搭配 --cards-only：只印出會上傳的內容，不實際上傳")
     args = parser.parse_args()
+
+    if args.cards_only:
+        # 卡片模式不需要本機權重，但 GGUF 卡片文字裡有檔名，所以還是要知道叫什麼
+        update_cards_only(
+            HfApi() if not args.dry_run else None,
+            args.lora_repo, args.gguf_repo, args.dataset_repo,
+            Path(args.gguf_q8).name if args.gguf_q8 else DEFAULT_Q8_FILENAME,
+            Path(args.gguf_q4).name if args.gguf_q4 else DEFAULT_Q4_FILENAME,
+            args.commit_message,
+            dry_run=args.dry_run,
+        )
+        return
+
+    missing = [f"--{n.replace('_', '-')}" for n in ("adapter_dir", "gguf_q8", "gguf_q4")
+               if not getattr(args, n)]
+    if missing:
+        parser.error(f"完整發佈模式需要 {', '.join(missing)}（只改卡片請加 --cards-only）")
 
     api = HfApi()
 
