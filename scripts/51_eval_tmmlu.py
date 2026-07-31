@@ -369,8 +369,11 @@ def print_summary(summary: dict) -> None:
             continue
         print(f"{group}: n={s['n']}  科目數={s['n_subjects']}  macro_acc={s['macro_accuracy']:.4f}  micro_acc={s['micro_accuracy']:.4f}")
     if "delta_macro_accuracy" in summary:
-        print(f"\nΔ macro accuracy (FT − base) = {summary['delta_macro_accuracy']:+.4f}")
-        print(f"Δ micro accuracy (FT − base) = {summary['delta_micro_accuracy']:+.4f}")
+        # 這裡用 ASCII 連字號而不是 U+2212：Windows console 預設 cp950 編不出 U+2212，
+        # 印出來會直接 UnicodeEncodeError 中斷腳本。註解與 HF card 裡的 U+2212 不受影響，
+        # 那些不經過 stdout 編碼。
+        print(f"\nΔ macro accuracy (FT - base) = {summary['delta_macro_accuracy']:+.4f}")
+        print(f"Δ micro accuracy (FT - base) = {summary['delta_micro_accuracy']:+.4f}")
 
 
 # ---------------------------------------------------------------------------

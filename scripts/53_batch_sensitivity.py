@@ -163,7 +163,9 @@ def main() -> None:
     result["delta_macro_a"] = delta_a
     result["delta_macro_b"] = delta_b
     result["delta_macro_shift"] = delta_b - delta_a
-    print(f"\nΔ macro（FT − base）：{delta_a*100:+.2f} pp -> {delta_b*100:+.2f} pp"
+    # ASCII 連字號，理由同 51_eval_tmmlu.py：U+2212 在 cp950 console 會讓腳本中斷。
+    # 這支是 README 標為「clone 後可直接跑」的其中一條，Windows 使用者一跑就撞到。
+    print(f"\nΔ macro（FT - base）：{delta_a*100:+.2f} pp -> {delta_b*100:+.2f} pp"
           f"　儀器誤差 = {abs(delta_b-delta_a)*100:.2f} pp")
     print("（這是抽樣誤差之外的另一份不確定度，報告的 CI 不涵蓋它）")
 
