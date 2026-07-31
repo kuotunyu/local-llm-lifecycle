@@ -51,10 +51,14 @@
 - 取用路徑：直接抓官方 GitHub 3 個 JSON（~50MB）自行解析，不依賴 HF 鏡像
 - **Phase 1 實測驗證**（`build_dataset.py`）：DRCD 是「段落級」切分而非「文章級」——292 篇 Wikipedia 文章同時貢獻段落給 train 和 dev（`article_id` 重疊），但已逐段落文字比對確認 **train/dev 間段落文字零重疊**（DRCD 官方切分的既有特性，非本專案流程引入的洩漏，hold-out 完整性成立）
 
-### 2.3 TMMLU+（catastrophic forgetting 檢查）
+### 2.3 TMMLU+（微調後的通用能力退步檢查）
 - 官方：`ikala/tmmluplus`（HF）；card 現標 **MIT**（2026-07-13 驗證；早期第三方頁面標 CC BY-NC，文件記錄存取日期即可）
 - 22,690 題 / 66 科目 / 4 大類（STEM、社會科學、人文、其他）；欄位 `question / A / B / C / D / answer`
-- 抽樣慣例：每科目均勻抽題、報 macro-average accuracy
+  - **注意 22,690 是三個 split 的總和**：train 330 + validation 2,242 + **test 20,118**。
+    評測只用 test split，所以「全量」= 20,118 題（2026-07-30 實測確認）
+- 慣例：report macro-average accuracy（先算每科 accuracy 再平均，避免大科目主導）
+- **2026-07-30 起改為 test split 全量評測，不抽樣**（原本每科抽 3 題的做法產生了有偏誤的
+  結論，詳見 EVAL_REPORT.md §4.3）
 
 ### 2.4 Colab Pro（$9.99/月）
 - 100 CU/月；**無背景執行**；分頁須開著，閒置 ~90 分鐘斷線，session 隨時可能被搶佔
@@ -97,7 +101,9 @@
 │   ├── 31_quantize.sh         # llama-quantize Q8_0 / Q4_K_M
 │   ├── 40_verify_template.py  # 五步驗證協定（關鍵交付物）
 │   ├── 50_eval_qa.py          # DRCD dev 五組評估（EM/F1/JSON 合法率/unanswerable 準確率）
-│   ├── 51_eval_tmmlu.py       # TMMLU+ 200 題 forgetting 檢查
+│   ├── 51_eval_tmmlu.py       # TMMLU+ test split 全量 20,118 題 forgetting 檢查
+│   ├── 52_tmmlu_paired_stats.py  # 配對檢定（McNemar + bootstrap CI + 選項偏誤診斷）
+│   ├── 53_batch_sensitivity.py   # batch 組成敏感度（評測儀器本身的誤差）
 │   └── 60_publish_hf.py       # LoRA repo + GGUF repo 上傳（含 model card）
 ├── deploy/
 │   ├── Modelfile              # Ollama（手寫 Go TEMPLATE，不信任自動偵測）
@@ -189,7 +195,7 @@ DRCD 抽取式 QA 不需要推理軌跡，目標是部署端**根本不產生** 
 - 核心答案：**「Q4 吃掉多少微調增益」=（組3−組1）vs（組5−組1）**；組4 切分損耗來自「轉檔」還是「Q8→Q4」
 - 組4/5 走 llama-server OpenAI 相容 API + async client（continuous batching，`-np 8`；context 總量 = 槽數 × 單請求 context，`-c` 要配好）；**不用 llama-cpp-python**（同步慢 + 自帶 chat-format 層會重新引入 template 漂移）
 - 所有組別 temperature 0、固定 seed；報告記錄 llama.cpp build commit
-- Forgetting：TMMLU+ 66 科抽樣共 200 題，**base vs FT 同在 transformers bf16** 下比（隔離微調單一變因），報 macro accuracy 變化
+- Forgetting：TMMLU+ 66 科 test split 全量 20,118 題，**base vs FT 同在 transformers bf16** 下比（隔離微調單一變因），報 macro accuracy 變化 **＋ 配對檢定的信賴區間**（兩組跑同一份題目，逐題可配對；只報點估計不足以支撐因果宣稱）
 
 ### 4.6 訓練超參數（草案 → `configs/train_config.yaml`，Phase 2 定稿）
 
@@ -308,14 +314,18 @@ Phase 3 實戰驗證：使用者不慎關閉整個瀏覽器（非演練），重
 - §7.3 素材：template 陷阱實錄（實際踩到什麼、怎麼修）
 
 ### Phase 5：五組評估 + forgetting（需 GPU）✅ 完成
-- `50_eval_qa.py` 五組全跑（§4.5）+ `51_eval_tmmlu.py`（200 題 ×2 權重）
+- `50_eval_qa.py` 五組全跑（§4.5）+ `51_eval_tmmlu.py`（test split 全量 20,118 題 ×2 權重）
+  + `52_tmmlu_paired_stats.py`（配對檢定）+ `53_batch_sensitivity.py`（儀器誤差）
 - 產出 EVAL_REPORT.md：五組對比表、W&B 截圖、「Q4 吃掉多少微調增益」專節、forgetting 分析、≥5 個錯誤案例分析（含 answerable 誤判方向分析）
 - 驗收：結果表完整、核心問題有量化答案、結論與數據自洽
-- **驗收結果（2026-07-17）**：`EVAL_REPORT.md` 已完稿。核心問題答案：微調增益（組3−組1）EM
-  +0.4569，Q4 部署後（組5−組1）EM +0.4574——量化幾乎零損耗。TMMLU+ forgetting check 確認
-  macro accuracy 掉 12.25 個百分點，微調本身的副作用遠大於量化。5 個錯誤案例（JSON 格式失敗、
-  抽取不精確、answerable 誤判兩個方向、TMMLU+ 具體科目失分）+ answerable 誤判方向統計（幻覺
-  15 題 vs 過度拒答 17 題，方向均衡無系統性偏誤）+ W&B train/eval loss 截圖，均已納入報告。
+- **驗收結果（2026-07-17，TMMLU+ 部分已於 2026-07-30 修正）**：`EVAL_REPORT.md` 已完稿。
+  核心問題答案：微調增益（組3−組1）EM +0.4569，Q4 部署後（組5−組1）EM +0.4574——量化幾乎
+  零損耗。5 個錯誤案例（JSON 格式失敗、抽取不精確、answerable 誤判兩個方向、TMMLU+ 退步樣態）
+  + answerable 誤判方向統計（幻覺 15 題 vs 過度拒答 17 題，方向均衡無系統性偏誤）
+  + W&B train/eval loss 截圖，均已納入報告。
+  **TMMLU+ 的結論在 2026-07-30 全量重跑後改寫**：原本根據 200 題宣稱「macro accuracy 掉
+  12.25 個百分點、微調副作用遠大於量化」，全量 20,118 題實測是 **−3.32 pp
+  （95% CI [−3.96, −2.69]）**，且退步以選項偏誤為主。見下方 2026-07-30 實作紀錄。
 - **實作紀錄（2026-07-16，進行中——本節為當機保險用的進度快照）**：
   - `scripts/50_eval_qa.py` 已完成並經單元測試（EM/F1 計分、JSON 解析、分層抽樣）＋三引擎 pilot 實測通過（transformers 批次、llama-server Q8_0、llama-server Q4_K_M 各 20 題）。設計重點：CMRC2018 風格字元級 EM/F1（中文逐字、英數整詞、多參考答案取 max）；JSON 解析失敗計 EM=F1=0 並單獨統計合法率；**斷點續跑**（逐題落盤 `results/eval_raw/<group>.jsonl`，重跑自動跳過已完成 qid）；base 組用 `unsloth/Qwen3-8B`（跟合併時同一顆 base，隔離微調變因）；組4/5 走 llama-server `-np 8` continuous batching + ThreadPoolExecutor 並發（不用 llama-cpp-python）
   - `scripts/51_eval_tmmlu.py` 已完成並測試抽樣邏輯（datasets-server REST API 直抓，66 科目均勻抽樣、抽樣快取確保 base/FT 同題可比），**推論還沒跑**（tmmlu_sample.json 快取尚未建立）
@@ -335,14 +345,12 @@ Phase 3 實戰驗證：使用者不慎關閉整個瀏覽器（非演練），重
   微調（組3，再 +0.11 EM）。舊的 `base_fewshot.jsonl.discarded-20260716`（bug 期間跑的
   1488 題部分結果）保留供對照，不進最終報告。
 
-  - **TMMLU+ forgetting check 完成（2026-07-17）**：`results/eval_raw/tmmlu_base.jsonl` /
-    `tmmlu_ft.jsonl` 各 200 題（66 科目均勻抽樣）。**base macro accuracy 0.6301 → FT
-    macro accuracy 0.5076，掉了 12.25 個百分點**——確認有明顯的 catastrophic forgetting：
-    DRCD QLoRA 微調（2 epochs、train loss 收斂到 0.005）在把模型訓練成「精確抽取式 QA
-    機器」的同時，明顯犧牲了原本的通用知識/選擇題能力。抽查 `tmmlu_ft.jsonl` 前幾筆輸出
-    確認是乾淨的單一字母作答（無空值、無解析失敗），排除是效能異常造成的假象——
-    **這是真實效應，不是 bug**，會是 EVAL_REPORT.md 的重點討論之一（跟 Q4 幾乎零損耗
-    形成對比：微調本身的副作用遠大於量化的副作用）
+  - **TMMLU+ forgetting check 初版（2026-07-17）——結論已於 2026-07-30 作廢，保留供對照**：
+    `results/eval_raw/tmmlu_base.jsonl` / `tmmlu_ft.jsonl` 各 200 題（66 科目每科 3-4 題）。
+    當時得到 base macro 0.6301 → FT 0.5076，掉 12.25 個百分點，據此宣稱「明顯的
+    catastrophic forgetting、微調副作用遠大於量化」。抽查輸出確認是乾淨的單一字母作答
+    （無空值、無解析失敗），排除了格式假象——**這部分的查證是對的**，錯的是把 200 題的
+    點估計當成可靠的量級，而且那 200 題還不是隨機抽的（每科固定取 test split 前 3 題）。
   - **踩雷（已修）：`datasets-server.huggingface.co` rate limit**——66 科目連續打
     request 撞到 HF 公開查詢 API 的滾動配額（觀察到約跑 60 幾科後才開始連續 429，不是
     針對特定科目封鎖）。修法三層：(1) 探測+抓題合併成一次呼叫（少打一半請求）、
@@ -369,9 +377,85 @@ Phase 3 實戰驗證：使用者不慎關閉整個瀏覽器（非演練），重
       --llama-server-bin /home/tun2404/qwen3-drcd-gguf/llama.cpp/build/bin/llama-server \
       --out-dir results/eval_raw
     # 彙整（不重新推論）：--summarize --out-dir results/eval_raw
-    # TMMLU+：python3 scripts/51_eval_tmmlu.py --base-model unsloth/Qwen3-8B \
-    #   --merged-dir /home/tun2404/qwen3-drcd-gguf/work/merged --out-dir results/eval_raw
     ```
+
+    TMMLU+ 全量（**換規模前一定要先刪掉舊的 `tmmlu_sample.json`**，否則會沿用舊考卷）：
+    ```bash
+    rm -f results/eval_raw/tmmlu_sample.json \
+          results/eval_raw/tmmlu_base.jsonl results/eval_raw/tmmlu_ft.jsonl
+    python3 scripts/51_eval_tmmlu.py --full --groups all \
+      --base-model unsloth/Qwen3-8B \
+      --merged-dir /home/tun2404/qwen3-drcd-gguf/work/merged \
+      --out-dir results/eval_raw
+    python3 scripts/52_tmmlu_paired_stats.py --out-dir results/eval_raw
+    ```
+    斷點續跑：直接重下同一條指令，`load_done_qids()` 會跳過已完成的 qid。
+    結果檔要**整份換掉、不要 append**，否則新舊 qid 會混在同一個檔案裡。
+
+- **TMMLU+ 全量重跑與結論修正（2026-07-30）**
+
+  起因：`8_開源模型 TMMLU+ 評測擂台` 準備發佈，那邊跑 66 科全量；本專案已公開的
+  n=200（每科 3 題）遺忘結論會跟它並排，先自查才不會被別人指出來。
+
+  **做的事與結果**：
+
+  1. **先對現有 200 題做配對檢定**（不用跑模型）。McNemar：base 對/FT 錯 29 題 vs 反向 4 題，
+     p = 1.1×10⁻⁵；Δ macro 的 95% CI = [−16.5, −8.0]。**方向是顯著的，原結論不算「在雜訊裡」**。
+     但同一份分析也顯示：66 科**沒有任何一科**的 per-subject CI 排除 0——每科 3 題時
+     accuracy 只能取 {0, ⅓, ⅔, 1}，EVAL_REPORT 那張「退步最明顯 5 科」的表沒有統計內容。
+  2. **抽樣改用 `datasets` 套件本機載入**（venv 補裝 `datasets` 5.0.1，全部新增、沒有升級
+     torch/transformers/numpy）。原本走 datasets-server REST API，單次 `length` 上限 100、
+     約 60-65 次請求後開始連續 429，全量要分頁 200 次以上，不可行。
+     **換資料來源的控制**：用新路徑重建同一份 200 題，`tmmlu_sample.json` 與舊檔
+     SHA-256 完全相同；再跑一次模型，`tmmlu_base.jsonl` / `tmmlu_ft.jsonl` 也與 7/17 的
+     原始檔逐位元相同。資料來源確定沒換到別的東西。
+  3. **修 `unload_transformers_model` 的真 bug**：原本函式內只做 `del model`，那只解除函式
+     自己的區域綁定，呼叫端的參照還在，模型根本沒被釋放——同一 process 連續載入 base 與 FT
+     會有兩顆 16.4 GB bf16 同時在 24 GB VRAM 裡，必定 OOM（當初是靠分兩次執行繞過去的）。
+     正解是呼叫端自己 `del`，函式改名 `free_cuda_memory()` 只負責清配置器。修完之後
+     base + FT 可以在同一支 process 連續跑完。
+  4. **踩雷（同一個根因第三次發作）：固定 batch=16 在全量長題目上直接 OOM**。
+     200 題抽樣取的是每科前 3 題、剛好都短（max 623 token），所以一直沒事；全量 test split
+     的 prompt 最長有 **2,273 token**，固定 batch=16 等於一個 batch 要 36k token，當場爆掉。
+     `50_eval_qa.py` 早就有解（token 預算制動態 batch + 依長度排序），這支腳本沒跟上。
+     移植過來之後不但不 OOM，吞吐率還從 ~20 題/秒 升到 **~45-59 題/秒**。
+  5. **新發現：greedy decoding 的「決定性」有前提**。同一組 batch 組成下逐位元可重現，
+     但**換 batch 組成結果會變**——bf16 規約順序隨 padding 與 batch 形狀改變，邊界題目的
+     logit 會被翻轉。200 題上光是從固定 batch=16 換成長度排序動態 batch，就有 base 2 題 /
+     FT 4 題改變答案，Δ macro 從 −12.25 pp 變成 −10.73 pp。
+     這推翻了 EVAL_REPORT 原本「效能異常不改變 greedy decoding 運算結果」的說法（那句話
+     只在 batch 組成不變時成立）。為此新增 `53_batch_sensitivity.py` 專門量這件事，
+     並在全量上再跑一輪對照（`--max-batch-tokens 6144` vs `12288`）：
+     **20,118 題裡兩組各只有 3 題改變預測（0.01%），Δ macro 位移 0.01 pp**——本報告採用的
+     長度排序動態 batch 在全量上非常穩定，不需要為此加寬 CI。
+     （注意這兩組對照的擾動強度不同：200 題那組換掉整個分批策略，全量這組只是同策略下
+     調預算。全量規模的「固定 vs 動態」沒辦法測，因為固定 batch=16 在全量上直接 OOM。）
+
+  **全量結果（20,118 題 × 2 權重，約 15 分鐘）**：
+
+  | | base | FT | Δ | 95% CI |
+  |---|---:|---:|---:|---:|
+  | macro accuracy | 0.5936 | 0.5604 | **−3.32 pp** | [−3.96, −2.69] |
+  | micro accuracy | 0.5937 | 0.5562 | −3.75 pp | [−4.28, −3.22] |
+
+  McNemar：base 對/FT 錯 1,836 vs 反向 1,081，p = 8.9×10⁻⁴⁵。66 科中 24 科顯著退步、
+  0 科顯著進步。
+
+  **兩個推翻先前結論的發現**：
+
+  - **量級差 3.7 倍，而且 −3.32 pp 落在 200 題算出的 CI [−16.5, −8.0] 之外**。原因是舊抽樣
+    每科固定取 test split 前 3 題（`offset=0`），不是隨機抽——bootstrap CI 的前提是隨機抽樣，
+    所以那個 CI 量錯了對象。開頭的題目也確實比較簡單（base macro 前 3 題 0.6301 vs 全量 0.5936）。
+  - **退步的機制是選項偏誤，不是知識遺忘**。FT 選 B 的次數比 base 少 1,946 次、選 D 多
+    1,889 次（幾乎一比一位移），於是 gold=B 的題目掉 16.9 pp，而 **gold=D 的題目反而進步
+    7.7 pp**。χ²(3) = 825.6，p = 1.2×10⁻¹⁷⁸。忘掉知識的模型不會在某個子集上變強。
+  - 舊版列為「略有進步 +0.33」的 `general_principles_of_law`，全量之後是**退步最嚴重的一科**
+    （−11.3 pp）；舊版「退步最明顯 5 科」裡有 2 科（`human_behavior`、
+    `traditional_chinese_medicine_clinical_medicine`）在全量下不顯著，前者甚至是 +0.3 pp。
+
+  **教訓**：小樣本點估計不只是「誤差大」，在抽樣方式有系統性偏誤時會是**錯的**，而且錯得
+  有自信（CI 看起來很漂亮地排除了 0）。凡是要下因果宣稱的指標，配對檢定與 CI 應該和點估計
+  一起產出，不是事後補。
 
 ### Phase 6：HF 發佈 + 文件定稿 ✅ 完成
 - `60_publish_hf.py`：LoRA repo + GGUF repo 轉正（完整 card：訓練細節、評估數據、用法（transformers / llama.cpp / Ollama / LM Studio）、Apache-2.0 權重授權、DRCD CC BY-SA 歸屬與引用、基底模型歸屬）；SFT dataset 轉 public（CC BY-SA 4.0）
