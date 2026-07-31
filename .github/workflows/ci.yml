@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # 主工作：驗證這個 repo 最核心的宣稱——「clone 下來就能重算出 EVAL_REPORT 的數字」。
+  # 只裝 numpy：四支統計腳本刻意不依賴 scipy，逐題結果已進 git，所以不需要 GPU、
+  # 不需要下載模型或資料集。整個 job 幾十秒內跑完。
+  reproduce:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # 版本要與 requirements.txt 一致：bootstrap 用固定 seed，同一個 numpy 版本才會
+      # 產生同一條 RNG stream。跨平台已實測——已發表數字算於 WSL2 Linux + Python 3.12.3，
+      # 在 Windows + Python 3.10.9 重算逐欄相同。
+      - name: Install numpy
+        run: pip install "numpy==1.26.4"
+
+      - name: Syntax check
+        run: python -m compileall -q scripts
+
+      # 這支鎖住了一個發表前攔下來的錯誤：perm_averaged 在 gold 平衡資料上恆等於
+      # 單一順序，拿它當回收指標會永遠顯示 0。回歸測試確保那個盲點不會再被當成指標。
+      - name: Oracle tests (option permutation)
+        run: python scripts/54_test_option_permutation.py
+
+      # 重算四個章節並逐欄比對 results/ 的 JSON，外加 README 首屏宣稱表的數字
+      # 必須對得回 artifact。任一欄不同就 exit 1。
+      - name: Reproduce published numbers from committed data
+        run: python scripts/57_verify_published_numbers.py
+
+  # 獨立成一個 job，這樣「相依解不開」與「數字對不上」在 CI 上是兩種不同的紅燈。
+  # 不實際安裝（torch 依 CUDA 版本另外裝，見 requirements.txt 開頭），只驗證這些 pin
+  # 現在還解得開——datasets>=5 這類 pin 會隨上游變動而失效。
+  resolve-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Resolve requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install --dry-run --report /dev/null -r requirements.txt

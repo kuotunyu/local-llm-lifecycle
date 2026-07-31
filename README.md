@@ -1,5 +1,10 @@
 # 開源模型全生命週期：Colab QLoRA → GGUF 量化 → Ollama/LM Studio 部署 → HF 發佈
 
+[![CI](https://github.com/kuotunyu/local-llm-lifecycle/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/local-llm-lifecycle/actions/workflows/ci.yml)
+
+CI 每次 push 都會從 committed 的逐題結果**重算下面那張表的每個數字**，逐欄比對
+`results/` 的 JSON，並確認 README 寫的數字對得回 artifact。任一欄不同就是紅燈。
+
 把 `Qwen/Qwen3-8B` 用 [DRCD](https://github.com/DRCKnowledgeTeam/DRCD) 做繁體中文抽取式閱讀理解
 （extractive QA）的 QLoRA 微調（Colab），回本機（Win11 + WSL2 + RTX 4090）合併、轉 GGUF、量化、
 部署到 Ollama / LM Studio，正式發佈到 Hugging Face。
@@ -177,6 +182,7 @@ python3 scripts/51_eval_tmmlu.py --full --groups all --base-model unsloth/Qwen3-
 
 | 想重跑什麼 | 指令 | clone 後可直接跑？ |
 |---|---|---|
+| **上面四項一次跑完並比對已發表結果** | `57_verify_published_numbers.py` | **可以**（CI 每次 push 跑這支） |
 | 置換邏輯的驗證測試 | `54_test_option_permutation.py` | **可以**（用 committed 子集，數秒） |
 | TMMLU+ 配對檢定與 CI | `52_tmmlu_paired_stats.py --out-dir results/eval_raw` | **可以**（逐題結果已進 git） |
 | 選項位移校正（§4.4） | `54_tmmlu_option_permutation.py --analyze --compact results/eval_perm/permutation_predictions.jsonl` | **可以**（緊湊逐題預測已進 git） |
@@ -202,6 +208,15 @@ raw_output 下游用不到）：
 是決定性的。
 
 最快確認這個 repo 的統計不是空話：clone 下來直接跑
+
+```bash
+pip install "numpy==1.26.4" && python3 scripts/57_verify_published_numbers.py
+```
+
+它會重算四個章節、逐欄比對 `results/` 的 JSON，再確認 README 首屏那張表的每個數字
+都對得回 artifact。全部相同才 exit 0。CI 跑的就是這支（Python 3.10 與 3.12）。
+
+只想驗置換邏輯本身（數秒、不需 numpy 以外的東西）：
 
 ```bash
 python3 scripts/54_test_option_permutation.py
