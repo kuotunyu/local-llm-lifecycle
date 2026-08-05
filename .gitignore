@@ -5,6 +5,17 @@ data/processed/*
 !data/processed/.gitkeep
 !data/processed/README.md
 
+# 私人面試筆記與本機開發輔助文檔
+PROGRESS.md
+interview*.md
+INTERVIEW_PREP.md
+*.private.md
+.agents/
+.claude/
+CLAUDE.md
+PLAN.md
+DESIGN.md
+
 # 捨棄的實驗輸出（保留在本機，不入公開版）
 *.discarded-*
 *.bak-*

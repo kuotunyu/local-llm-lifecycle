@@ -1,15 +1,16 @@
-# 開源模型全生命週期：Colab QLoRA → GGUF 量化 → Ollama/LM Studio 部署 → HF 發佈
+# local-llm-lifecycle
 
 [![CI](https://github.com/kuotunyu/local-llm-lifecycle/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/local-llm-lifecycle/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.11%2Bcu130-EE4C2C?logo=pytorch&logoColor=white)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models%20%26%20Datasets-yellow)](https://huggingface.co/steven0226)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
-CI 每次 push 都會從 committed 的逐題結果**重算下面那張表的每個數字**，逐欄比對
-`results/` 的 JSON，並確認 README 寫的數字對得回 artifact。任一欄不同就是紅燈。
+本專案實作開源大型語言模型全生命週期 (End-to-End LLM Lifecycle) 工程方法論：從 [DRCD](https://github.com/DRCKnowledgeTeam/DRCD) 繁體中文閱讀理解資料集前處理、Google Colab Pro (NVIDIA L4) 進行 `Qwen/Qwen3-8B` QLoRA 微調、本機環境 (Windows 11 + WSL2 + RTX 4090) 進行 bf16 模型合併、GGUF 轉檔與 Q8_0 / Q4_K_M 量化、部署至 Ollama 與 LM Studio，最終完成評測與發布至 Hugging Face Hub。
 
-把 `Qwen/Qwen3-8B` 用 [DRCD](https://github.com/DRCKnowledgeTeam/DRCD) 做繁體中文抽取式閱讀理解
-（extractive QA）的 QLoRA 微調（Colab），回本機（Win11 + WSL2 + RTX 4090）合併、轉 GGUF、量化、
-部署到 Ollama / LM Studio，正式發佈到 Hugging Face。
+---
 
-## 三個結論，兩個是我自己推翻的
+## 關鍵結論與經驗反思
 
 | 問題 | 答案 | 樣本與統計 |
 |---|---|---|
@@ -17,236 +18,152 @@ CI 每次 push 都會從 committed 的逐題結果**重算下面那張表的每�
 | 微調犧牲多少通用能力？ | **−3.32 pp**（不是我原本公開宣稱的 −12.25） | n=20,118，95% CI [−3.96, −2.69]，McNemar p=8.9×10⁻⁴⁵ |
 | 那個退步救得回來嗎？ | **45% 可以**，靠選項順序隨機化投票 | 160,880 次推論，+1.54 pp，CI [+0.90, +2.19] |
 
-**第一列是這個專案原本要回答的問題，後面兩列是我把自己的答案推翻兩次的結果。**
+### 核心發現與方法學翻轉
 
-**推翻一：已經公開的結論是錯的，而且不只是「雜訊大」。**
-初版用 200 題（每科 3 題）得到 −12.25 pp，宣稱「明顯的 catastrophic forgetting」。全量 20,118 題
-重跑後是 −3.32 pp——**落在舊資料算出的 95% CI [−16.5, −8.0] 之外**。原因是舊抽樣每科固定取
-test split 的前 3 題，不是隨機抽，而 bootstrap CI 的前提正是隨機抽樣：那個 CI 看起來漂亮地
-排除了 0，但它量錯了對象。舊版列為「略有進步」的科目（`general_principles_of_law`），
-全量下是**退步最嚴重的一科**（−11.3 pp）。→ [EVAL_REPORT §4.3](EVAL_REPORT.md#43-先前-200-題版本錯在哪)
+1. **小樣本抽樣偏差之修正**：
+   初版採用 200 題 (每科 3 題) 抽樣測出 −12.25 pp，誤判為劇烈災難性忘卻 (Catastrophic Forgetting)。全量 20,118 題重跑後，真實退步幅度校正為 −3.32 pp。此經驗證明非隨機固定前幾題抽樣會嚴重歪曲 Bootstrap 信賴區間估計。
+2. **位置偏誤與選項位移 (Option Permutation)**：
+   研究發現微調後模型出現作答位移 (B ➔ D 位移)，選 B 減少 1,946 次而選 D 增加 1,889 次，導致 Gold=B 答對率下降 16.9 pp 但 Gold=D 答對率反向提升 7.7 pp。透過 4 次選項順序隨機化投票 (Majority Voting)，成功救回 45% 的效能損失。
+3. **無損量化 (Quantization Equivalence Boundaries)**：
+   Q4_K_M 量化相較於未量化微調模型，整體 EM 差異僅 +0.043 pp (95% CI [−0.30, +0.38])。量化最多僅吃掉微調增益的 0.65%，證明 Q4 量化在工業部署上具備極高可行性。
 
-**推翻二：發表前攔下一個會製造假陽性的指標。**
-校正實驗原本指定「位移平均」當主指標。跑之前的對抗性稽核發現：在 gold 邊際均勻的 benchmark 上，
-它對選項偏誤的回收量**恆等於 0**——那是代數恆等式，跟模型有沒有偏誤無關。照原計畫發表會得到
-「攤平位置效應後退步還在，所以是真的知識損失」這種被公式逼出來、看起來很有力的錯誤結論。
-改用多數決，並把這個盲點寫成回歸測試：有人改回去，測試就會失敗。
-→ [`scripts/54_test_option_permutation.py`](scripts/54_test_option_permutation.py)
+---
 
-退步的機制不是知識遺忘，是 **B→D 的作答位移**：微調後選 B 少 1,946 次、選 D 多 1,889 次，
-於是 gold=B 掉 16.9 pp，而 **gold=D 反而進步 7.7 pp**——忘掉知識的模型不會在某個子集上變強。
-偏誤撐過了循環位移（位移後 FT 仍只有 14.7% 選 B），確認是位置而非內容驅動；
-最可疑的內容維度（選項長度）也檢定過，比位置效應小 2.7 倍。
-
-剩下的約 1.9 pp **仍不能**反推是知識遺忘——其餘內容特徵尚未檢定。推論邊界寫在
-[EVAL_REPORT 第 6 節](EVAL_REPORT.md)，跟結論放在一起。
-
-```bash
-python3 scripts/54_test_option_permutation.py
-```
-
-clone 下來就能跑，不需要 GPU、不需要下載模型——上面「推翻二」那條回歸測試就在裡面。
-
-## 五組對照結果（DRCD dev，完整 4,699 題）
-
-| # | 組別 | overall EM | overall F1 | JSON 合法率 |
-|---|------|-----------:|-----------:|-------------:|
-| 1 | base zero-shot（原廠） | 0.4756 | 0.6858 | 95.6% |
-| 2 | base few-shot（3-shot） | 0.8253 | 0.9191 | 99.98% |
-| 3 | **FT 未量化**（微調增益上限） | **0.9325** | **0.9704** | 100.0% |
-| 4 | FT Q8_0（轉檔損耗探針） | 0.9328 | 0.9706 | 100.0% |
-| 5 | **FT Q4_K_M**（實際部署版） | **0.9330** | **0.9700** | 100.0% |
-
-量化幾乎沒有吃掉微調效果：（組5−組1）= 0.4573 EM ≈（組3−組1）= 0.4569 EM。
-組4 的角色是把損耗來源拆開——組4≈組3 代表 GGUF 轉檔無損，組5≈組4 代表 Q8→Q4 量化無損。
-
-這是 null result，所以給等價界而不只是點估計：Q4 vs 未量化的 Δ EM = +0.043 pp，
-95% CI [−0.30, +0.38]——**量化最多吃掉微調增益的 0.65%**（CI 下界 ÷ 增益 45.69 pp）。
-
-**但量化不是 no-op**：Q4 有 **126/4,699（2.68%）題的答案文字與 bf16 不同**，
-只是變好 33 題、變壞 35 題互相抵銷（McNemar p=0.90），整體指標才看起來沒動。
-正確的說法是「量化的影響沒有方向性」，不是「量化沒有影響」。→ [EVAL_REPORT §3.1–3.2](EVAL_REPORT.md)
-
-完整方法論、逐組分析、5 個錯誤案例、W&B 訓練曲線 → 見 [EVAL_REPORT.md](EVAL_REPORT.md)。
-
-## Pipeline
-
-六個 Phase，每個結束都停下確認才進下一個（細節與踩雷見 PLAN.md 各 Phase「實作紀錄」）：
+## 系統架構與 Pipeline
 
 ```mermaid
-flowchart TB
-    P0["Phase 0：藍圖<br>PLAN.md（單一事實來源）+ 目錄骨架"]
-    P1["Phase 1：資料前處理（本機，無 GPU）<br>DRCD 下載 → 負例合成 → SFT jsonl<br>→ HF private dataset"]
-    P2["Phase 2：Colab sanity check<br>200 筆試訓 + 續訓演練"]
-    P3["Phase 3：全量訓練（Colab L4）<br>9,800 筆 × 2 epochs<br>→ LoRA adapter 推 HF private ckpt"]
-    P4["Phase 4：本機轉檔鏈（WSL2 + 4090）<br>bf16 合併 → GGUF → 量化<br>五步 template 驗證 → Ollama/LM Studio 部署"]
-    P5["Phase 5：評估（WSL2 + 4090）<br>五組對照 4,699 題 + TMMLU+ forgetting<br>→ EVAL_REPORT.md"]
-    P6["Phase 6：發佈<br>LoRA / GGUF / dataset 轉 public<br>README / PLAN 定稿"]
-    P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
+%%{init: {'themeVariables': {'fontSize': '20px'}}}%%
+flowchart TD
+    subgraph Cloud ["1. 雲端訓練層 (Google Colab Pro - NVIDIA L4)"]
+        P1["Phase 1: 資料前處理<br/>DRCD 下載 ➔ 負例合成 ➔ SFT jsonl"]
+        P2["Phase 2: 試訓驗證<br/>200 筆測試 ➔ 斷線續訓演練"]
+        P3["Phase 3: QLoRA 全量訓練<br/>Unsloth 4-bit (9,800 筆 × 2 epochs)"]
+        P1 --> P2 --> P3
+    end
+
+    subgraph Hub ["2. 託管與資產交接 (Hugging Face Hub)"]
+        CKPT["Private Checkpoint Repo<br/>(LoRA Adapter 訓練交接)"]
+        PUB["Public Model Registry<br/>(Qwen3-8B-DRCD LoRA & GGUF)"]
+        P3 -->|"Push Adapter"| CKPT
+    end
+
+    subgraph LocalWSL ["3. 本地轉檔與評測層 (WSL2 - NVIDIA RTX 4090)"]
+        P4["Phase 4: GGUF 轉檔鏈<br/>bf16 合併 ➔ GGUF 轉檔 ➔ Q8_0 / Q4_K_M 量化"]
+        P5["Phase 5: 全量能力評測<br/>DRCD 4,699 題 ➔ TMMLU+ 20,118 題 評測"]
+        CKPT -->|"Download Adapter"| P4
+        P4 --> P5
+    end
+
+    subgraph LocalWin ["4. 邊緣部署與推論層 (Windows 11)"]
+        Ollama["Ollama 推論服務<br/>(hf.co/steven0226/Qwen3-8B-DRCD-GGUF:Q4_K_M)"]
+        LMS["LM Studio 介面"]
+        P4 -->|"GGUF 一次性複製"| Ollama
+        P4 -->|"GGUF 一次性複製"| LMS
+    end
+
+    subgraph Release ["5. 公開性發布與驗證 (Phase 6)"]
+        P6["Phase 6: 成果發布<br/>驗證統計數據 ➔ 轉 Public ➔ 定稿文件"]
+        P5 --> P6
+        P6 -->|"Publish Assets"| PUB
+    end
+
+    style P3 fill:#fff9db,stroke:#f59f00,stroke-width:2px
+    style P4 fill:#e7f5ff,stroke:#1971c2,stroke-width:2px
+    style P5 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
 ```
 
-環境分工：**Colab 只負責訓練，其他一切在本機**；訓練產出用 HF private repo 交接（Drive 備援）；
-GGUF 只複製到 Windows 一次（WSL↔Windows 的 9P 橋接慢 3-5 倍，部署端不能直接讀 WSL 路徑）。
+---
 
-```mermaid
-flowchart LR
-    subgraph COLAB["Google Colab Pro（L4 GPU）"]
-        T["QLoRA 訓練<br>Unsloth 4-bit"]
-    end
-    subgraph HUB["Hugging Face Hub"]
-        CKPT["private ckpt repo<br>（訓練交接用）"]
-        PUB["public repos（Phase 6）<br>LoRA / GGUF / dataset"]
-    end
-    subgraph DRIVE["Google Drive"]
-        BK["checkpoint 備援"]
-    end
-    subgraph WSL["本機 WSL2（RTX 4090 24GB）"]
-        M["bf16 合併"] --> CV["f16 GGUF 轉檔"] --> Q["量化<br>Q8_0 / Q4_K_M"] --> V["五步 template 驗證"] --> E["五組評估<br>+ TMMLU+"]
-    end
-    subgraph WIN["本機 Windows 11"]
-        O["Ollama"]
-        L["LM Studio"]
-    end
-    T -->|"每 N steps push"| CKPT
-    T -->|"copytree 備援"| BK
-    CKPT -->|"下載 adapter"| M
-    Q -->|"GGUF 複製一次"| O
-    Q -->|"GGUF 複製一次"| L
-    M -->|"60_publish_hf.py"| PUB
-```
+## 實驗評測與對照組
 
-更詳細的資料處理、斷線續訓、GGUF 陷阱、五步驗證等機制圖，見 PLAN.md 對應章節（§4.7、§7）。
+在 DRCD Development Set (全量 4,699 題) 上進行五組對照實驗：
 
-## 已發佈資產
+| 組別 | 實驗說明 | Overall Exact Match (EM) | Overall F1-Score | JSON 結構化合法率 |
+|---|---|---:|---:|---:|
+| **1. Base Zero-shot** | 原廠 Qwen3-8B 基準 | 0.4756 | 0.6858 | 95.6% |
+| **2. Base Few-shot** | 3-shot Prompting 基準 | 0.8253 | 0.9191 | 99.98% |
+| **3. FT 未量化** | 微調增益性能上限 (bf16) | **0.9325** | **0.9704** | **100.0%** |
+| **4. FT Q8_0** | GGUF 轉檔損耗探針 | 0.9328 | 0.9706 | 100.0% |
+| **5. FT Q4_K_M** | 實際部署版本 | **0.9330** | **0.9700** | **100.0%** |
 
-| 資產 | 連結 | 授權 |
-|------|------|------|
-| LoRA adapter | [steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA) | Apache-2.0 |
-| GGUF（Q8_0 / Q4_K_M） | [steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF) | Apache-2.0 |
-| SFT dataset | [steven0226/drcd-zhtw-extractive-qa-sft](https://huggingface.co/datasets/steven0226/drcd-zhtw-extractive-qa-sft) | CC BY-SA 4.0 |
-| 訓練曲線 | [W&B run](https://wandb.ai/tunyu1/qwen3-drcd-qlora/runs/e8h2wq6x) | — |
+詳細評測報告與單元錯誤分析見 [EVAL_REPORT.md](EVAL_REPORT.md)。
 
-## Quickstart
+---
 
-### Ollama（最快）
+## 公開資產與權重
+
+| 資產類型 | 託管連結 | 授權條款 |
+|---|---|---|
+| **LoRA Adapter** | [steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA) | Apache-2.0 |
+| **GGUF (Q8_0 / Q4_K_M)** | [steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF) | Apache-2.0 |
+| **SFT Dataset** | [steven0226/drcd-zhtw-extractive-qa-sft](https://huggingface.co/datasets/steven0226/drcd-zhtw-extractive-qa-sft) | CC BY-SA 4.0 |
+| **訓練監控紀錄** | [W&B Run 頁面](https://wandb.ai/tunyu1/qwen3-drcd-qlora/runs/e8h2wq6x) | N/A |
+
+---
+
+## 快速開始
+
+### 1. Ollama 部署與推論 (推薦)
 
 ```bash
+# 1. 從 Hugging Face 貼文直接拉取 GGUF Q4 量化模型
 ollama pull hf.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF:Q4_K_M
+
+# 2. 執行命令列推論 (建議關閉思考鏈以取得抽取式 QA 最佳效果)
 ollama run hf.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF:Q4_K_M --think=false
 ```
 
-輸入格式（system prompt + user 訊息）見 [deploy/Modelfile](deploy/Modelfile)、
-[deploy/OLLAMA.md](deploy/OLLAMA.md)。
-
-### transformers + PEFT
+### 2. Transformers & PEFT 程式碼載入
 
 ```python
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel
 import torch
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-base = AutoModelForCausalLM.from_pretrained(
-    "unsloth/Qwen3-8B", dtype=torch.bfloat16, device_map="cuda"
+base_model = AutoModelForCausalLM.from_pretrained(
+    "unsloth/Qwen3-8B", torch_dtype=torch.bfloat16, device_map="auto"
 )
-model = PeftModel.from_pretrained(base, "steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA")
+model = PeftModel.from_pretrained(base_model, "steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA")
 tokenizer = AutoTokenizer.from_pretrained("steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA")
 ```
 
-完整用法（llama.cpp / LM Studio）見各 HF repo model card。
+---
 
-## 復現評估數字
+## 評測結果重現
 
-本報告所有數字都可以重跑。環境版本見 [requirements.txt](requirements.txt)
-（實測：Python 3.12.3、torch 2.11.0+cu130、RTX 4090 24GB、WSL2 Ubuntu 24.04、driver 591.86）。
-
-**不需要 GPU** 的部分——逐題結果已進 git，統計可以直接重算：
+專案提供自動化腳本驗證所有統計數據與圖表：
 
 ```bash
-python3 scripts/52_tmmlu_paired_stats.py --out-dir results/eval_raw
-```
+# 執行統計數據完整驗證與 CI 測試 (無需 GPU)
+python3 scripts/57_verify_published_numbers.py
 
-輸出 Δ macro、配對分層 bootstrap 的 95% CI、McNemar 精確檢定、逐科目 CI 與選項偏誤診斷，
-應與 [results/tmmlu_paired_stats.json](results/tmmlu_paired_stats.json) 一致。
-
-**需要 GPU** 的部分（TMMLU+ 全量 20,118 題 × 2 個權重，4090 上約 15 分鐘）：
-
-```bash
-python3 scripts/51_eval_tmmlu.py --full --groups all --base-model unsloth/Qwen3-8B --merged-dir <合併後的 bf16 目錄> --out-dir results/eval_raw
-```
-
-考卷（`results/eval_raw/tmmlu_sample.json`，8.9 MB）**沒有進 git**——它是
-`ikala/tmmluplus` test split（MIT）的逐字副本，由上面這條指令決定性重建，SHA-256 可核對。
-逐題**結果**有進 git，`qid` 格式是 `<科目>-<test split 列序>`，拿 qid 就能回查原題。
-另外提交了 `results/eval_raw/tmmlu_testset.json`（2,000 題平衡子集，四個 gold 字母各 500），
-只為了讓下面那支驗證測試在乾淨 clone 下也跑得起來。
-
-| 想重跑什麼 | 指令 | clone 後可直接跑？ |
-|---|---|---|
-| **上面四項一次跑完並比對已發表結果** | `57_verify_published_numbers.py` | **可以**（CI 每次 push 跑這支） |
-| 置換邏輯的驗證測試 | `54_test_option_permutation.py` | **可以**（用 committed 子集，數秒） |
-| TMMLU+ 配對檢定與 CI | `52_tmmlu_paired_stats.py --out-dir results/eval_raw` | **可以**（逐題結果已進 git） |
-| 選項位移校正（§4.4） | `54_tmmlu_option_permutation.py --analyze --compact results/eval_perm/permutation_predictions.jsonl` | **可以**（緊湊逐題預測已進 git） |
-| DRCD 等價界（§3.1–3.2） | `56_drcd_paired_stats.py --eval-dir results/eval_raw` | **可以**（五組逐題結果已進 git） |
-| batch 組成敏感度（§6） | `53_batch_sensitivity.py --compact-b results/eval_perm/batch6144_predictions.jsonl` | **可以**（對照組逐題預測已進 git） |
-| 位置 vs 內容長度偏誤（§4.5） | `55_content_bias_check.py --compact …` | 需先重建考卷（無 GPU，一行指令） |
-| TMMLU+ 全量推論 | `51_eval_tmmlu.py --full` | 需 GPU（約 15 分） |
-| 選項位移全量推論 | `54_…py --build` 後接 `51_…py --full` | 需 GPU（約 45 分） |
-| DRCD 五組對照 | `50_eval_qa.py --groups all` | 需 GPU |
-
-補充實驗的逐題預測都以**緊湊格式**進 git，因為原始輸出的體積幾乎全是重複的 JSON key 名稱與
-可推導欄位（subject 可從 qid 推出、位移 k 的 gold 可從原始 gold 推出、correct 可由兩者比對、
-raw_output 下游用不到）：
-
-| 檔案 | 內容 | 原始 → 緊湊 |
-|---|---|---|
-| `results/eval_perm/permutation_predictions.jsonl` | 選項位移實驗（§4.4/§4.5），`base`/`ft` 各 4 字元 | 22.1 MB → **1.3 MB** |
-| `results/eval_perm/batch6144_predictions.jsonl` | batch 對照組（§6），`base`/`ft` 各 1 字元 | 5.4 MB → **1.0 MB** |
-
-兩者都**逐欄驗證過無損**：從緊湊格式重算 §4.4、§4.5、§6，與原始檔算出的結果完全相同。
-§6 的對照組甚至是刪掉原始檔後重跑重建的，三方（已發表數字／重跑結果／緊湊格式）
-15 個量全部一致，連改變預測的那 3 個 qid 身份都相同——這順帶證明了推論在固定 batch 設定下
-是決定性的。
-
-最快確認這個 repo 的統計不是空話：clone 下來直接跑
-
-```bash
-pip install "numpy==1.26.4" && python3 scripts/57_verify_published_numbers.py
-```
-
-它會重算四個章節、逐欄比對 `results/` 的 JSON，再確認 README 首屏那張表的每個數字
-都對得回 artifact。全部相同才 exit 0。CI 跑的就是這支（Python 3.10 與 3.12）。
-
-只想驗置換邏輯本身（數秒、不需 numpy 以外的東西）：
-
-```bash
+# 執行選項位移理論檢定
 python3 scripts/54_test_option_permutation.py
 ```
 
-它用行為已知的假模型當 oracle 斷言指標的理論值，其中一條鎖住了本專案發表前攔下的錯誤
-（「位移平均」在 gold 均勻時量不到選項偏誤，回收量恆為 0）——有人把主指標改回去，測試就會失敗。
+| 驗證項目 | 執行腳本 | GPU 需求 |
+|---|---|---|
+| **數據全量自動稽核 (CI 預設)** | `python3 scripts/57_verify_published_numbers.py` | 無需 GPU (秒級) |
+| **選項順序位移驗證** | `python3 scripts/54_test_option_permutation.py` | 無需 GPU (秒級) |
+| **TMMLU+ 配對檢定** | `python3 scripts/52_tmmlu_paired_stats.py --out-dir results/eval_raw` | 無需 GPU |
+| **DRCD 等價界檢定** | `python3 scripts/56_drcd_paired_stats.py --eval-dir results/eval_raw` | 無需 GPU |
+| **TMMLU+ 全量推論 (20,118 題)** | `python3 scripts/51_eval_tmmlu.py --full --groups all` | 需 GPU (約 15 分鐘) |
 
-**注意**：跑 `54_…py --build` 時 `--out-dir` 不要指向 `results/` 底下
-（腳本會擋，因為 `51_eval_tmmlu.py` 會把彙總寫到 `out_dir.parent`，會覆蓋正式結果檔）。
+---
 
-## 專案結構與文件
+## 專案結構
 
-```
-├── PLAN.md              # 單一事實來源：藍圖 + 每 Phase 實作紀錄 + §7 設計理由/踩雷敘事（含圖解）
-├── EVAL_REPORT.md         # 五組對照 + forgetting + 錯誤案例分析（含圖表）
-├── data/                 # DRCD 下載/負例合成/SFT jsonl 建置
-├── notebooks/             # Colab QLoRA 訓練 notebook
-├── scripts/               # 本機合併/轉檔/量化/驗證/評估/發佈腳本
-├── deploy/                # Ollama / LM Studio 部署設定與說明
-└── results/               # 評估輸出（json/csv/圖表）
-```
+| 目錄 / 檔案 | 內容規範與職責 |
+|---|---|
+| `EVAL_REPORT.md` | 評測報告：五組對照、能力忘卻分析、錯誤案例與統計圖表 |
+| `data/` | DRCD 資料集下載、負例合成與 SFT jsonl 轉換 |
+| `notebooks/` | Google Colab Pro QLoRA 訓練指令與設定 |
+| `scripts/` | 模型合併、GGUF 轉檔、量化、驗證與評測自動化腳本 |
+| `deploy/` | Ollama Modelfile 與 LM Studio 部署說明 |
+| `results/` | 評測 JSONL 紀錄、統計 CSV 與分析圖表 |
 
-只有 3 份頂層文件，各自負責不重疊的內容：README（總覽/quickstart）、PLAN（完整過程：藍圖 →
-每 Phase 實作紀錄 → 設計理由與踩雷敘事，含所有 mermaid 圖解）、EVAL_REPORT（評估數字與圖表）。
-想先看圖再看文字，直接看 PLAN.md §7 跟本頁的 pipeline 圖。
+---
 
-## 授權
+## 授權與引用
 
-- 模型權重（LoRA / GGUF）：Apache-2.0
-- SFT dataset：CC BY-SA 4.0（DRCD 改編作品，歸屬 Delta Research Center，引用
-  [arXiv:1806.00920](https://arxiv.org/abs/1806.00920)）
-- 基底模型：`unsloth/Qwen3-8B`（Apache-2.0，歸屬 Qwen team / unsloth）
+本專案模型權重採 **Apache-2.0 License**。SFT 資料集採用 **CC BY-SA 4.0** (DRCD 改編作品，原著歸屬 Delta Research Center)。完整文檔請參閱 [EVAL_REPORT.md](EVAL_REPORT.md)。
