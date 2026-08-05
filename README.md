@@ -34,9 +34,17 @@
 ### 1. 六階段開發與生命週期 Pipeline
 
 ```mermaid
-%%{init: {'themeVariables': {'fontSize': '16px'}}}%%
-flowchart LR
-    P0["Phase 0<br/>藍圖與架構規畫"] --> P1["Phase 1<br/>資料前處理"] --> P2["Phase 2<br/>Colab 試訓驗證"] --> P3["Phase 3<br/>QLoRA 訓練"] --> P4["Phase 4<br/>轉檔與量化"] --> P5["Phase 5<br/>全量能力評測"] --> P6["Phase 6<br/>公開發布交付"]
+%%{init: {'themeVariables': {'fontSize': '22px'}}}%%
+flowchart TD
+    P0["Phase 0：藍圖與架構規畫 (PLAN.md)"]
+    P1["Phase 1：資料前處理 (DRCD ➔ 負例合成 ➔ SFT)"]
+    P2["Phase 2：Colab 試訓與續訓演練 (200 筆)"]
+    P3["Phase 3：全量 QLoRA 訓練 (Colab L4 GPU)"]
+    P4["Phase 4：本機 GGUF 轉檔與 Q8 / Q4 量化 (WSL2 + RTX 4090)"]
+    P5["Phase 5：DRCD 4,699 題 & TMMLU+ 20,118 題 全量評測"]
+    P6["Phase 6：公開發布與成果交付 (Hugging Face Hub)"]
+
+    P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
 
     classDef phaseStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
     class P0,P1,P2,P3,P4,P5,P6 phaseStyle
@@ -45,7 +53,7 @@ flowchart LR
 ### 2. 跨平台與硬體資產流向
 
 ```mermaid
-%%{init: {'themeVariables': {'fontSize': '16px'}}}%%
+%%{init: {'themeVariables': {'fontSize': '18px'}}}%%
 flowchart TD
     subgraph S1 ["1. 雲端訓練 (Google Colab Pro - NVIDIA L4 GPU)"]
         T["QLoRA 4-bit 微調訓練 (Unsloth)"]
