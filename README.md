@@ -31,45 +31,66 @@
 
 ## 系統架構與 Pipeline
 
+### 1. 六階段開發與生命週期 Pipeline
+
 ```mermaid
 %%{init: {'themeVariables': {'fontSize': '20px'}}}%%
-flowchart TD
-    subgraph Cloud ["1. 雲端訓練層 (Google Colab Pro - NVIDIA L4)"]
-        P1["Phase 1: 資料前處理<br/>DRCD 下載 ➔ 負例合成 ➔ SFT jsonl"]
-        P2["Phase 2: 試訓驗證<br/>200 筆測試 ➔ 斷線續訓演練"]
-        P3["Phase 3: QLoRA 全量訓練<br/>Unsloth 4-bit (9,800 筆 × 2 epochs)"]
-        P1 --> P2 --> P3
+flowchart TB
+    P0["Phase 0：藍圖與架構規畫<br/>PLAN.md (單一事實來源) + 目錄骨架建置"]
+    P1["Phase 1：資料前處理 (本機 CPU)<br/>DRCD 原始資料下載 ➔ 負例合成 ➔ SFT jsonl 格式化"]
+    P2["Phase 2：Colab 試訓驗證<br/>200 筆資料試訓 ➔ 斷線續訓與微調驗證演練"]
+    P3["Phase 3：全量 QLoRA 訓練 (Colab L4 GPU)<br/>9,800 筆 × 2 Epochs ➔ LoRA Adapter 推送 HF Private Ckpt"]
+    P4["Phase 4：本機轉檔鏈 (WSL2 + RTX 4090)<br/>bf16 權重合併 ➔ GGUF 轉檔 ➔ Q8_0 / Q4_K_M 量化 ➔ 部署"]
+    P5["Phase 5：全量能力評測 (WSL2 + RTX 4090)<br/>DRCD 4,699 題 ➔ TMMLU+ 20,118 題 評測 ➔ EVAL_REPORT.md"]
+    P6["Phase 6：公開發布與交付<br/>LoRA / GGUF / Dataset 轉 Public ➔ README 定稿"]
+
+    P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
+
+    classDef stageStyle fill:#f8f9fa,stroke:#343a40,stroke-width:2px,color:#212529
+    classDef highlightStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
+
+    class P0,P1,P2,P6 stageStyle
+    class P3,P4,P5 highlightStyle
+```
+
+### 2. 跨平台與硬體資產流向
+
+```mermaid
+%%{init: {'themeVariables': {'fontSize': '20px'}}}%%
+flowchart LR
+    subgraph COLAB ["Google Colab Pro (L4 GPU)"]
+        T["QLoRA 訓練<br/>Unsloth 4-bit"]
     end
 
-    subgraph Hub ["2. 託管與資產交接 (Hugging Face Hub)"]
-        CKPT["Private Checkpoint Repo<br/>(LoRA Adapter 訓練交接)"]
-        PUB["Public Model Registry<br/>(Qwen3-8B-DRCD LoRA & GGUF)"]
-        P3 -->|"Push Adapter"| CKPT
+    subgraph HUB ["Hugging Face Hub"]
+        CKPT["Private Checkpoint Repo<br/>(訓練交接用)"]
+        PUB["Public Model Registry<br/>(LoRA / GGUF / Dataset)"]
     end
 
-    subgraph LocalWSL ["3. 本地轉檔與評測層 (WSL2 - NVIDIA RTX 4090)"]
-        P4["Phase 4: GGUF 轉檔鏈<br/>bf16 合併 ➔ GGUF 轉檔 ➔ Q8_0 / Q4_K_M 量化"]
-        P5["Phase 5: 全量能力評測<br/>DRCD 4,699 題 ➔ TMMLU+ 20,118 題 評測"]
-        CKPT -->|"Download Adapter"| P4
-        P4 --> P5
+    subgraph WSL ["本機 WSL2 (RTX 4090 24GB)"]
+        M["bf16 權重合併"] --> CV["f16 GGUF 轉檔"] --> Q["Q8_0 / Q4_K_M 量化"] --> V["五步 Template 驗證"] --> E["DRCD / TMMLU+ 評測"]
     end
 
-    subgraph LocalWin ["4. 邊緣部署與推論層 (Windows 11)"]
-        Ollama["Ollama 推論服務<br/>(hf.co/steven0226/Qwen3-8B-DRCD-GGUF:Q4_K_M)"]
-        LMS["LM Studio 介面"]
-        P4 -->|"GGUF 一次性複製"| Ollama
-        P4 -->|"GGUF 一次性複製"| LMS
+    subgraph WIN ["本機 Windows 11 部署"]
+        O["Ollama 服務"]
+        L["LM Studio 介面"]
     end
 
-    subgraph Release ["5. 公開性發布與驗證 (Phase 6)"]
-        P6["Phase 6: 成果發布<br/>驗證統計數據 ➔ 轉 Public ➔ 定稿文件"]
-        P5 --> P6
-        P6 -->|"Publish Assets"| PUB
-    end
+    T -->|"每 N steps push"| CKPT
+    CKPT -->|"下載 Adapter"| M
+    Q -->|"GGUF 複製"| O
+    Q -->|"GGUF 複製"| L
+    M -->|"自動化腳本發布"| PUB
 
-    style P3 fill:#fff9db,stroke:#f59f00,stroke-width:2px
-    style P4 fill:#e7f5ff,stroke:#1971c2,stroke-width:2px
-    style P5 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef colabStyle fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#5f3dc4
+    classDef hubStyle fill:#fff3bf,stroke:#e67700,stroke-width:2px,color:#d9480f
+    classDef wslStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
+    classDef winStyle fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#099268
+
+    class T colabStyle
+    class CKPT,PUB hubStyle
+    class M,CV,Q,V,E wslStyle
+    class O,L winStyle
 ```
 
 ---
