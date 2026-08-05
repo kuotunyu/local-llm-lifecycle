@@ -34,17 +34,19 @@
 ### 1. 六階段開發與生命週期 Pipeline
 
 ```mermaid
-%%{init: {'themeVariables': {'fontSize': '22px'}}}%%
-flowchart TD
-    P0["Phase 0：藍圖與架構規畫 (PLAN.md)"]
-    P1["Phase 1：資料前處理 (DRCD ➔ 負例合成 ➔ SFT)"]
-    P2["Phase 2：Colab 試訓與續訓演練 (200 筆)"]
-    P3["Phase 3：全量 QLoRA 訓練 (Colab L4 GPU)"]
-    P4["Phase 4：本機 GGUF 轉檔與 Q8 / Q4 量化 (WSL2 + RTX 4090)"]
-    P5["Phase 5：DRCD 4,699 題 & TMMLU+ 20,118 題 全量評測"]
-    P6["Phase 6：公開發布與成果交付 (Hugging Face Hub)"]
+%%{init: {'themeVariables': {'fontSize': '20px'}}}%%
+flowchart LR
+    subgraph Part1 ["階段一：準備與訓練"]
+        direction LR
+        P0["Phase 0<br/>藍圖與架構"] --> P1["Phase 1<br/>資料前處理"] --> P2["Phase 2<br/>Colab 試訓"] --> P3["Phase 3<br/>QLoRA 訓練"]
+    end
 
-    P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
+    subgraph Part2 ["階段二：轉檔、評測與發布"]
+        direction LR
+        P4["Phase 4<br/>轉檔與量化"] --> P5["Phase 5<br/>全量能力評測"] --> P6["Phase 6<br/>公開發布交付"]
+    end
+
+    Part1 --> Part2
 
     classDef phaseStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
     class P0,P1,P2,P3,P4,P5,P6 phaseStyle
