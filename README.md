@@ -34,63 +34,52 @@
 ### 1. 六階段開發與生命週期 Pipeline
 
 ```mermaid
-%%{init: {'themeVariables': {'fontSize': '20px'}}}%%
-flowchart TB
-    P0["Phase 0：藍圖與架構規畫<br/>PLAN.md (單一事實來源) + 目錄骨架建置"]
-    P1["Phase 1：資料前處理 (本機 CPU)<br/>DRCD 原始資料下載 ➔ 負例合成 ➔ SFT jsonl 格式化"]
-    P2["Phase 2：Colab 試訓驗證<br/>200 筆資料試訓 ➔ 斷線續訓與微調驗證演練"]
-    P3["Phase 3：全量 QLoRA 訓練 (Colab L4 GPU)<br/>9,800 筆 × 2 Epochs ➔ LoRA Adapter 推送 HF Private Ckpt"]
-    P4["Phase 4：本機轉檔鏈 (WSL2 + RTX 4090)<br/>bf16 權重合併 ➔ GGUF 轉檔 ➔ Q8_0 / Q4_K_M 量化 ➔ 部署"]
-    P5["Phase 5：全量能力評測 (WSL2 + RTX 4090)<br/>DRCD 4,699 題 ➔ TMMLU+ 20,118 題 評測 ➔ EVAL_REPORT.md"]
-    P6["Phase 6：公開發布與交付<br/>LoRA / GGUF / Dataset 轉 Public ➔ README 定稿"]
+%%{init: {'themeVariables': {'fontSize': '16px'}}}%%
+flowchart LR
+    P0["Phase 0<br/>藍圖與架構規畫"] --> P1["Phase 1<br/>資料前處理"] --> P2["Phase 2<br/>Colab 試訓驗證"] --> P3["Phase 3<br/>QLoRA 訓練"] --> P4["Phase 4<br/>轉檔與量化"] --> P5["Phase 5<br/>全量能力評測"] --> P6["Phase 6<br/>公開發布交付"]
 
-    P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
-
-    classDef stageStyle fill:#f8f9fa,stroke:#343a40,stroke-width:2px,color:#212529
-    classDef highlightStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
-
-    class P0,P1,P2,P6 stageStyle
-    class P3,P4,P5 highlightStyle
+    classDef phaseStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
+    class P0,P1,P2,P3,P4,P5,P6 phaseStyle
 ```
 
 ### 2. 跨平台與硬體資產流向
 
 ```mermaid
-%%{init: {'themeVariables': {'fontSize': '20px'}}}%%
-flowchart LR
-    subgraph COLAB ["Google Colab Pro (L4 GPU)"]
-        T["QLoRA 訓練<br/>Unsloth 4-bit"]
+%%{init: {'themeVariables': {'fontSize': '16px'}}}%%
+flowchart TD
+    subgraph S1 ["1. 雲端訓練 (Google Colab Pro - NVIDIA L4 GPU)"]
+        T["QLoRA 4-bit 微調訓練 (Unsloth)"]
     end
 
-    subgraph HUB ["Hugging Face Hub"]
-        CKPT["Private Checkpoint Repo<br/>(訓練交接用)"]
-        PUB["Public Model Registry<br/>(LoRA / GGUF / Dataset)"]
+    subgraph S2 ["2. 資產託管與交接 (Hugging Face Hub)"]
+        CKPT["Private Checkpoint Repo (訓練交接)"]
+        PUB["Public Model Registry (LoRA / GGUF / Dataset)"]
     end
 
-    subgraph WSL ["本機 WSL2 (RTX 4090 24GB)"]
-        M["bf16 權重合併"] --> CV["f16 GGUF 轉檔"] --> Q["Q8_0 / Q4_K_M 量化"] --> V["五步 Template 驗證"] --> E["DRCD / TMMLU+ 評測"]
+    subgraph S3 ["3. 本地轉檔與評測 (WSL2 - NVIDIA RTX 4090 24GB)"]
+        M["bf16 權重合併"] --> Q["GGUF 轉檔與 Q8_0 / Q4_K_M 量化"] --> E["DRCD / TMMLU+ 全量能力評測"]
     end
 
-    subgraph WIN ["本機 Windows 11 部署"]
+    subgraph S4 ["4. 邊緣部署與推論 (Windows 11)"]
         O["Ollama 服務"]
         L["LM Studio 介面"]
     end
 
-    T -->|"每 N steps push"| CKPT
-    CKPT -->|"下載 Adapter"| M
+    T -->|"Push Adapter"| CKPT
+    CKPT -->|"Download Adapter"| M
     Q -->|"GGUF 複製"| O
     Q -->|"GGUF 複製"| L
-    M -->|"自動化腳本發布"| PUB
+    M -->|"發布權重"| PUB
 
-    classDef colabStyle fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#5f3dc4
-    classDef hubStyle fill:#fff3bf,stroke:#e67700,stroke-width:2px,color:#d9480f
-    classDef wslStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
-    classDef winStyle fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#099268
+    classDef s1Style fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#5f3dc4
+    classDef s2Style fill:#fff3bf,stroke:#e67700,stroke-width:2px,color:#d9480f
+    classDef s3Style fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
+    classDef s4Style fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#099268
 
-    class T colabStyle
-    class CKPT,PUB hubStyle
-    class M,CV,Q,V,E wslStyle
-    class O,L winStyle
+    class T s1Style
+    class CKPT,PUB s2Style
+    class M,Q,E s3Style
+    class O,L s4Style
 ```
 
 ---
