@@ -34,22 +34,36 @@
 ### 1. 六階段開發與生命週期 Pipeline
 
 ```mermaid
-%%{init: {'themeVariables': {'fontSize': '20px'}}}%%
-flowchart LR
-    subgraph Part1 ["階段一：準備與訓練"]
+%%{init: {'themeVariables': {'fontSize': '18px'}}}%%
+flowchart TD
+    subgraph PhasePrep ["階段一：資料準備與試訓 (Data Prep & Pilot Run)"]
         direction LR
-        P0["Phase 0<br/>藍圖與架構"] --> P1["Phase 1<br/>資料前處理"] --> P2["Phase 2<br/>Colab 試訓"] --> P3["Phase 3<br/>QLoRA 訓練"]
+        P0["Phase 0：架構規劃<br/>(技術藍圖與軟硬體定義)"] --> P1["Phase 1：資料工程<br/>(DRCD 負例合成與 SFT 轉換)"] --> P2["Phase 2：Colab 試訓<br/>(驗證訓練管線與收斂性)"]
     end
 
-    subgraph Part2 ["階段二：轉檔、評測與發布"]
+    subgraph PhaseTrain ["階段二：微調訓練與資產合併 (QLoRA & Merging)"]
         direction LR
-        P4["Phase 4<br/>轉檔與量化"] --> P5["Phase 5<br/>全量能力評測"] --> P6["Phase 6<br/>公開發布交付"]
+        P3["Phase 3：QLoRA 微調<br/>(Colab L4 4-bit 訓練)"] --> P4["Phase 4：模型合併與量化<br/>(bf16 合併 ➔ GGUF Q8_0 / Q4_K_M)"]
     end
 
-    Part1 --> Part2
+    subgraph PhaseDeploy ["階段三：能力評測與多平台發布 (Evaluation & Deployment)"]
+        direction LR
+        P5["Phase 5：全量基準評測<br/>(DRCD + 20,118 題 TMMLU+)"] --> P6(["Phase 6：公開交付發布<br/>(Ollama · LM Studio · HF Hub)"])
+    end
 
-    classDef phaseStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
-    class P0,P1,P2,P3,P4,P5,P6 phaseStyle
+    PhasePrep --> PhaseTrain --> PhaseDeploy
+
+    classDef srcStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#212529
+    classDef procStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#212529
+    classDef pubStyle fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#212529
+
+    class P0,P1,P2 srcStyle
+    class P3,P4,P5 procStyle
+    class P6 pubStyle
+
+    style PhasePrep fill:#f8f9fa,stroke:#1971c2,stroke-width:2px,color:#1971c2,stroke-dasharray: 4 4
+    style PhaseTrain fill:#faf5ff,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2,stroke-dasharray: 4 4
+    style PhaseDeploy fill:#f4fbf7,stroke:#0ca678,stroke-width:2px,color:#0ca678,stroke-dasharray: 4 4
 ```
 
 ### 2. 跨平台與硬體資產流向
@@ -57,39 +71,45 @@ flowchart LR
 ```mermaid
 %%{init: {'themeVariables': {'fontSize': '18px'}}}%%
 flowchart TD
-    subgraph S1 ["1. 雲端訓練 (Google Colab Pro - NVIDIA L4 GPU)"]
-        T["QLoRA 4-bit 微調訓練 (Unsloth)"]
+    subgraph S1 ["1. 雲端訓練端 (Google Colab Pro - NVIDIA L4 GPU)"]
+        direction LR
+        T[("QLoRA 4-bit 微調訓練<br/>(Unsloth 框架)")]
     end
 
     subgraph S2 ["2. 資產託管與交接 (Hugging Face Hub)"]
-        CKPT["Private Checkpoint Repo (訓練交接)"]
-        PUB["Public Model Registry (LoRA / GGUF / Dataset)"]
+        direction LR
+        CKPT[("Private Checkpoint Repo<br/>(Adapter 訓練交接)")] --> PUB[("Public Model Registry<br/>(LoRA / GGUF / SFT Dataset)")]
     end
 
-    subgraph S3 ["3. 本地轉檔與評測 (WSL2 - NVIDIA RTX 4090 24GB)"]
-        M["bf16 權重合併"] --> Q["GGUF 轉檔與 Q8_0 / Q4_K_M 量化"] --> E["DRCD / TMMLU+ 全量能力評測"]
+    subgraph S3 ["3. 本地轉檔與評測端 (WSL2 - NVIDIA RTX 4090 24GB)"]
+        direction LR
+        M["bf16 權重合併<br/>(Full Weights)"] --> Q[("GGUF 轉檔與量化<br/>(Q8_0 / Q4_K_M)")] --> E["DRCD / TMMLU+ 全量評測<br/>(20,118 題客觀評估)"]
     end
 
-    subgraph S4 ["4. 邊緣部署與推論 (Windows 11)"]
-        O["Ollama 服務"]
-        L["LM Studio 介面"]
+    subgraph S4 ["4. 邊緣部署與推論端 (Windows 11)"]
+        direction LR
+        O(["Ollama 服務<br/>(本機 API 服務)"]) & L(["LM Studio 介面<br/>(本機 GUI 體驗)"])
     end
 
     T -->|"Push Adapter"| CKPT
     CKPT -->|"Download Adapter"| M
-    Q -->|"GGUF 複製"| O
-    Q -->|"GGUF 複製"| L
+    Q -->|"載入 GGUF"| O & L
     M -->|"發布權重"| PUB
 
-    classDef s1Style fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#5f3dc4
-    classDef s2Style fill:#fff3bf,stroke:#e67700,stroke-width:2px,color:#d9480f
-    classDef s3Style fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#0c8599
-    classDef s4Style fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#099268
+    classDef s1Style fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#212529
+    classDef s2Style fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#212529
+    classDef s3Style fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#212529
+    classDef s4Style fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#212529
 
     class T s1Style
     class CKPT,PUB s2Style
     class M,Q,E s3Style
     class O,L s4Style
+
+    style S1 fill:#fffcf0,stroke:#f59f00,stroke-width:2px,color:#f59f00,stroke-dasharray: 4 4
+    style S2 fill:#faf5ff,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2,stroke-dasharray: 4 4
+    style S3 fill:#f8f9fa,stroke:#1971c2,stroke-width:2px,color:#1971c2,stroke-dasharray: 4 4
+    style S4 fill:#f4fbf7,stroke:#0ca678,stroke-width:2px,color:#0ca678,stroke-dasharray: 4 4
 ```
 
 ---
@@ -100,11 +120,11 @@ flowchart TD
 
 | 組別 | 實驗說明 | Overall Exact Match (EM) | Overall F1-Score | JSON 結構化合法率 |
 |---|---|---:|---:|---:|
-| **1. Base Zero-shot** | 原廠 Qwen3-8B 基準 | 0.4756 | 0.6858 | 95.6% |
-| **2. Base Few-shot** | 3-shot Prompting 基準 | 0.8253 | 0.9191 | 99.98% |
-| **3. FT 未量化** | 微調增益性能上限 (bf16) | **0.9325** | **0.9704** | **100.0%** |
-| **4. FT Q8_0** | GGUF 轉檔損耗探針 | 0.9328 | 0.9706 | 100.0% |
-| **5. FT Q4_K_M** | 實際部署版本 | **0.9330** | **0.9700** | **100.0%** |
+| 1. Base Zero-shot | 原廠 Qwen3-8B 基準 | 0.4756 | 0.6858 | 95.6% |
+| 2. Base Few-shot | 3-shot Prompting 基準 | 0.8253 | 0.9191 | 99.98% |
+| 3. FT 未量化 | 微調增益性能上限 (bf16) | 0.9325 | 0.9704 | 100.0% |
+| 4. FT Q8_0 | GGUF 轉檔損耗探針 | 0.9328 | 0.9706 | 100.0% |
+| 5. FT Q4_K_M | 實際部署版本 | 0.9330 | 0.9700 | 100.0% |
 
 詳細評測報告與單元錯誤分析見 [EVAL_REPORT.md](EVAL_REPORT.md)。
 
@@ -114,10 +134,10 @@ flowchart TD
 
 | 資產類型 | 託管連結 | 授權條款 |
 |---|---|---|
-| **LoRA Adapter** | [steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA) | Apache-2.0 |
-| **GGUF (Q8_0 / Q4_K_M)** | [steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF) | Apache-2.0 |
-| **SFT Dataset** | [steven0226/drcd-zhtw-extractive-qa-sft](https://huggingface.co/datasets/steven0226/drcd-zhtw-extractive-qa-sft) | CC BY-SA 4.0 |
-| **訓練監控紀錄** | [W&B Run 頁面](https://wandb.ai/tunyu1/qwen3-drcd-qlora/runs/e8h2wq6x) | N/A |
+| LoRA Adapter | [steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-LoRA) | Apache-2.0 |
+| GGUF (Q8_0 / Q4_K_M) | [steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF) | Apache-2.0 |
+| SFT Dataset | [steven0226/drcd-zhtw-extractive-qa-sft](https://huggingface.co/datasets/steven0226/drcd-zhtw-extractive-qa-sft) | CC BY-SA 4.0 |
+| 訓練監控紀錄 | [W&B Run 頁面](https://wandb.ai/tunyu1/qwen3-drcd-qlora/runs/e8h2wq6x) | N/A |
 
 ---
 
@@ -126,7 +146,7 @@ flowchart TD
 ### 1. Ollama 部署與推論 (推薦)
 
 ```bash
-# 1. 從 Hugging Face 貼文直接拉取 GGUF Q4 量化模型
+# 1. 從 Hugging Face 直接拉取 GGUF Q4 量化模型
 ollama pull hf.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF:Q4_K_M
 
 # 2. 執行命令列推論 (建議關閉思考鏈以取得抽取式 QA 最佳效果)
@@ -163,11 +183,11 @@ python3 scripts/54_test_option_permutation.py
 
 | 驗證項目 | 執行腳本 | GPU 需求 |
 |---|---|---|
-| **數據全量自動稽核 (CI 預設)** | `python3 scripts/57_verify_published_numbers.py` | 無需 GPU (秒級) |
-| **選項順序位移驗證** | `python3 scripts/54_test_option_permutation.py` | 無需 GPU (秒級) |
-| **TMMLU+ 配對檢定** | `python3 scripts/52_tmmlu_paired_stats.py --out-dir results/eval_raw` | 無需 GPU |
-| **DRCD 等價界檢定** | `python3 scripts/56_drcd_paired_stats.py --eval-dir results/eval_raw` | 無需 GPU |
-| **TMMLU+ 全量推論 (20,118 題)** | `python3 scripts/51_eval_tmmlu.py --full --groups all` | 需 GPU (約 15 分鐘) |
+| 數據全量自動稽核 (CI 預設) | `python3 scripts/57_verify_published_numbers.py` | 無需 GPU (秒級) |
+| 選項順序位移驗證 | `python3 scripts/54_test_option_permutation.py` | 無需 GPU (秒級) |
+| TMMLU+ 配對檢定 | `python3 scripts/52_tmmlu_paired_stats.py --out-dir results/eval_raw` | 無需 GPU |
+| DRCD 等價界檢定 | `python3 scripts/56_drcd_paired_stats.py --eval-dir results/eval_raw` | 無需 GPU |
+| TMMLU+ 全量推論 (20,118 題) | `python3 scripts/51_eval_tmmlu.py --full --groups all` | 需 GPU (約 15 分鐘) |
 
 ---
 

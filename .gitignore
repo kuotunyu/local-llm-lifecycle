@@ -21,7 +21,7 @@ DESIGN.md
 *.bak-*
 
 # TMMLU+ 全量考卷（20,118 題、約 8.9 MB）：ikala/tmmluplus test split 的逐字副本，
-# 由 `51_eval_tmmlu.py --full` 決定性重建，不需要進 git。逐題**結果**（tmmlu_base.jsonl /
+# 由 `51_eval_tmmlu.py --full` 決定性重建，不需要進 git。逐題結果（tmmlu_base.jsonl /
 # tmmlu_ft.jsonl）有進 git，那才是這個 repo 產出的東西；qid 是 `<科目>-<test split 列序>`，
 # 拿 qid 就能回查原題，稽核性不受影響。
 results/eval_raw/tmmlu_sample.json
@@ -45,6 +45,11 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # 憑證（HF token 只放 Colab Secrets / 環境變數）
 .env
@@ -53,3 +58,5 @@ venv/
 # OS / 編輯器
 Thumbs.db
 .DS_Store
+.idea/
+.vscode/
