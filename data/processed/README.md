@@ -54,5 +54,8 @@ tags:
 }
 ```
 
-完整專案（QLoRA 微調 -> GGUF 量化 -> Ollama/LM Studio 部署 -> 評估）：https://github.com/kuotunyu/local-llm-lifecycle
-方法論與逐 Phase 實作紀錄見 PLAN.md，完整評估報告見 EVAL_REPORT.md。
+完整專案（QLoRA 微調 -> GGUF 量化 -> Ollama/LM Studio 部署 -> 評估）：
+[github.com/kuotunyu/local-llm-lifecycle](https://github.com/kuotunyu/local-llm-lifecycle)
+
+方法論總覽見 [README](https://github.com/kuotunyu/local-llm-lifecycle#readme)，完整評估報告見
+[EVAL_REPORT.md](https://github.com/kuotunyu/local-llm-lifecycle/blob/main/EVAL_REPORT.md)。

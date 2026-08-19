@@ -1,6 +1,6 @@
 """Phase 4 Step 2: 合併 LoRA adapter 回 base model（bf16，非量化狀態）。
 
-已知坑（PLAN.md §4「本機合併/轉檔」）：
+已知坑（本機合併/轉檔流程見 README）：
 1. 絕不合併進 4-bit base（會毀品質，huggingface/peft#2105、huggingface/transformers#31293）。
    PEFT 訓練時記錄的 base_model_name_or_path 是 unsloth/Qwen3-8B-unsloth-bnb-4bit（4-bit 版），
    這裡改用它背後對應的**未量化版本** unsloth/Qwen3-8B（同團隊、同樣的 tokenizer 修正，只是沒有

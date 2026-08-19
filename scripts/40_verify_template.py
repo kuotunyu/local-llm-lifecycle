@@ -1,4 +1,4 @@
-"""Phase 4 Step 5：chat template 五步驗證協定（PLAN.md §4.4）。
+"""Phase 4 Step 5：chat template 五步驗證協定。
 
 證明「transformers 版」跟「llama.cpp（GGUF）版」的 chat template 渲染行為一致，
 沒有在合併/轉檔過程中壞掉。這是本專案「量化 × 微調交互作用」評估能不能信任的前提——

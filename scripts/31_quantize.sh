@@ -3,7 +3,7 @@
 #
 # 用法：./31_quantize.sh <f16_gguf_path> <llama_cpp_dir> <out_dir>
 #
-# Q8_0 是評估用的「轉檔損耗探針」（PLAN.md §4.5 組4）：如果 Q8_0 的推論結果就跟
+# Q8_0 是評估用的「轉檔損耗探針」（EVAL_REPORT 組4）：如果 Q8_0 的推論結果就跟
 # transformers 版對不上，代表問題出在轉檔/template，不是量化本身。Q4_K_M 才是實際
 # 要部署到 Ollama/LM Studio 的版本。
 

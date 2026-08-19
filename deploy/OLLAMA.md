@@ -2,7 +2,7 @@
 
 ## 安裝與匯入
 
-Ollama 建議裝在 **Windows 原生**（不是 WSL2 內）——GGUF 檔案放在 Windows 檔案系統，Ollama 跟 LM Studio 可以共用同一份，也不會有 WSL2↔Windows 之間 9P 檔案系統橋接的效能損耗（PLAN.md §4「GGUF 轉檔鏈」）。
+Ollama 建議裝在 **Windows 原生**（不是 WSL2 內）——GGUF 檔案放在 Windows 檔案系統，Ollama 跟 LM Studio 可以共用同一份，也不會有 WSL2↔Windows 之間 9P 檔案系統橋接的效能損耗（完整流程見專案 README）。
 
 1. 確認 Ollama 服務有跑起來（`ollama serve`，或桌面版會自動啟動背景服務）
 2. GGUF 檔案放在 `D:\models\qwen3-8b-drcd-qa\`（Q8_0 跟 Q4_K_M 兩個版本都放，Q4_K_M 是實際部署用的）

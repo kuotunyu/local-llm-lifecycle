@@ -1,6 +1,6 @@
 # EVAL_REPORT：五組對照評估與 Forgetting Check
 
-> 對應 PLAN.md Phase 5。回答本專案的核心問題：**量化會吃掉多少微調效果？**
+> 對應 README 的完整評測階段。回答本專案的核心問題：**量化會吃掉多少微調效果？**
 
 **一句話結論**：QLoRA 微調把 EM 從 0.476（原廠 zero-shot）拉到 0.933，量化到 Q4_K_M 部署版之後
 增益幾乎完全保留——**量化最多吃掉微調增益的 0.65%**（EM，95% CI 下界；點估計實際還微幅為正）。
@@ -31,7 +31,7 @@
 - **base 組刻意用 `unsloth/Qwen3-8B`**（不是官方 `Qwen/Qwen3-8B`）——這是 LoRA 實際合併時的
   起點權重（見 `scripts/20_merge_lora.py`），同一份 base 才能讓「組3−組1」乾淨地只反映微調本身，
   不混入 unsloth tokenizer 修正版跟官方版之間的差異。
-- 詳細方法論、chat template 驗證見 PLAN.md §4.4、§4.5。
+- 詳細方法論見本報告；chat template 驗證協定見 `scripts/40_verify_template.py`。
 
 ---
 
@@ -493,6 +493,6 @@ n=80,440，零 GPU）：
   問題（慢 30+ 倍且結果被作廢重跑），`51_eval_tmmlu.py` 先是撞到同一種病的碎片化版本，
   全量重跑時又因為固定 batch=16 遇到 2,273 token 的長題目而直接 OOM——同一個根因發作三次。
   最終修法統一成「token 預算制動態 batch + 依長度排序」（`50_eval_qa.py` 早就是這樣做的），
-  詳見 PLAN.md Phase 5 實作紀錄。
+  實作分別見 `scripts/50_eval_qa.py` 與 `scripts/51_eval_tmmlu.py`。
 - **llama-server 版本**：組4/5 使用的 llama.cpp build commit 是
   `a5822222909b785f23ddc74ce3c8f85bd0e38562`（記錄在 `requirements.txt`，同一份 build 用於 GGUF 轉檔、量化與 llama-server 推論）。

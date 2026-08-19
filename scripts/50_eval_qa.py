@@ -1,4 +1,4 @@
-"""Phase 5：DRCD dev 五組對照評估（PLAN.md §4.5）。
+"""Phase 5：DRCD dev 五組對照評估（完整方法見 EVAL_REPORT）。
 
 五組：
   1. base_zeroshot    — 原廠 base（未微調），transformers bf16，zero-shot
@@ -66,7 +66,7 @@ BASE_MODEL_DEFAULT = "unsloth/Qwen3-8B"
 SERVER_PORT = 8712
 SERVER_URL = f"http://127.0.0.1:{SERVER_PORT}"
 
-# 固定順序（PLAN.md §4.5 的組別順序）；用 set 只拿來做成員測試，不能拿來排序——
+# 固定順序（EVAL_REPORT 的組別順序）；用 set 只拿來做成員測試，不能拿來排序——
 # Python 的 set 疊代順序受字串 hash 隨機化影響，每次執行可能不同，之前拿它排過
 # 執行順序，害進度回報跟實際不一致（同一個模型的組別還是會排在一起執行，只是
 # 順序不可預期），改成明確固定的 list。

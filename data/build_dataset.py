@@ -4,7 +4,7 @@ Phase 1: DRCD -> SFT 資料集建構
 流程：下載官方 DRCD 三個 JSON -> 統計 -> 合成 unanswerable 負例（同文章跨段落為主、
 跨文章隨機為輔，含假負例過濾）-> 產出 SFT chat-format jsonl -> （可選）推到 HF private dataset。
 
-詳細設計依據見 PLAN.md §2.2（DRCD 事實）、§4.2（負例合成）、§4.3（SFT 格式）、Phase 1 驗收標準。
+完整資料集設計、負例合成與 SFT schema 見本檔及 data/processed/README.md。
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ DRCD_FILES = {
     "dev": "DRCD_dev.json",
     "test": "DRCD_test.json",
 }
-# PLAN.md §2.2 查證數字，下載後用來驗證來源沒有偷改
+# 已查證的來源題數，下載後用來驗證上游內容沒有變動
 EXPECTED_QUESTION_COUNTS = {"train": 26936, "dev": 3524, "test": 3493}
 
 SYSTEM_PROMPT = (
@@ -221,7 +221,7 @@ def compute_split_stats(split: str, paragraphs: list[Paragraph], questions: list
 
 
 # --------------------------------------------------------------------------
-# unanswerable 負例合成（PLAN.md §4.2）
+# unanswerable 負例合成
 # --------------------------------------------------------------------------
 
 @dataclass
@@ -445,7 +445,7 @@ tags:
 ```
 
 完整專案（QLoRA 微調 -> GGUF 量化 -> Ollama/LM Studio 部署 -> 評估）：https://github.com/kuotunyu/local-llm-lifecycle
-方法論與逐 Phase 實作紀錄見 PLAN.md，完整評估報告見 EVAL_REPORT.md。
+方法論總覽見 README.md，完整評估報告見 EVAL_REPORT.md。
 """
 
 
@@ -515,7 +515,7 @@ def main() -> None:
     for split, (paragraphs, questions) in splits.items():
         all_stats["splits"][split] = compute_split_stats(split, paragraphs, questions, tokenizer=tokenizer)
         s = all_stats["splits"][split]
-        flag = "OK" if s["matches_expected"] else "!! 與 PLAN.md 查證數字不符，請檢查來源是否變動"
+        flag = "OK" if s["matches_expected"] else "!! 與凍結驗證數字不符，請檢查來源是否變動"
         print(f"[stats] {split}: {s['n_questions']} 題（預期 {s['expected_n_questions']}）[{flag}]")
 
     leakage = check_train_dev_leakage(splits["train"][0], splits["dev"][0])

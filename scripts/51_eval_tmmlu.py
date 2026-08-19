@@ -1,4 +1,4 @@
-"""Phase 5：TMMLU+ 微調後的通用能力退步檢查（PLAN.md §2.3 / §4.5）。
+"""Phase 5：TMMLU+ 微調後的通用能力退步檢查（完整方法見 EVAL_REPORT）。
 
 TMMLU+ 66 科目 test split **全量 20,118 題**，base（unsloth/Qwen3-8B）vs FT（合併後
 bf16）**同在 transformers bf16 下比**（隔離微調單一變因，不牽扯量化），報 macro-average
