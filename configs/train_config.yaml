@@ -1,4 +1,4 @@
-# 訓練超參數單一事實來源（PLAN.md §4.6）
+# 凍結訓練超參數的單一事實來源
 # notebooks/colab_qlora_train.ipynb 的 config cell 會讀這份檔案；
 # 若 Colab 執行環境找不到這個檔案（例如尚未上傳），notebook 內建有完全相同數值的備援設定。
 #
@@ -22,7 +22,7 @@ lora:
   use_gradient_checkpointing: "unsloth"
   random_state: 3407
   # 註：Unsloth 官方 Qwen3 範例 notebook 預設用 r=32/alpha=32（容量更大）；
-  # 這裡沿用 PLAN.md 草案的 r=16（抽取式 QA 輸出格式單純，不需要太大容量），
+  # 這裡沿用定稿的 r=16（抽取式 QA 輸出格式單純，不需要太大容量），
   # 若之後發現欠擬合可以調大。
 
 sanity_check:
@@ -37,7 +37,7 @@ full_run:
   max_train_samples: null  # null = 用 train_sft.jsonl 全部 10000 筆
   eval_holdout: 200
   num_train_epochs: 2
-  save_steps: 50           # 8B QLoRA 在 L4 上一次 save_steps 間隔預估落在 15-30 分鐘（PLAN.md §2.4）
+  save_steps: 50           # 8B QLoRA 在 L4 上一次 save_steps 間隔預估落在 15-30 分鐘
   eval_steps: 50
   logging_steps: 10
 
@@ -56,7 +56,7 @@ training:
   seed: 3407
 
 hub:
-  dataset_repo: "steven0226/drcd-zhtw-extractive-qa-sft"       # Phase 1 已推送（private）
+  dataset_repo: "steven0226/drcd-zhtw-extractive-qa-sft"       # 正式公開 dataset
   adapter_checkpoint_repo_sanity: "steven0226/qwen3-8b-drcd-qa-ckpt-sanity"
   adapter_checkpoint_repo_full: "steven0226/qwen3-8b-drcd-qa-ckpt"
 

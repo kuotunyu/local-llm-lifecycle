@@ -6,7 +6,7 @@
 # 部署後務必用 `ollama show <model> --template` 實測確認、並用
 # `OLLAMA_DEBUG=1` 檢查實際渲染的 prompt（見 deploy/OLLAMA.md）。
 #
-# 非思考模式：本模型訓練時一律用 enable_thinking=False 渲染（PLAN.md §4.1），
+# 非思考模式：本模型訓練時一律用 enable_thinking=False 渲染（見專案 README），
 # 對話時要加 --think=false（CLI）或 API 的 "think": false 參數，確保跟訓練時
 # 的格式一致，不要讓 Qwen3 的 hybrid thinking 機制自己決定要不要輸出 <think>。
 

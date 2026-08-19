@@ -1,10 +1,13 @@
 # local-llm-lifecycle
 
 [![CI](https://github.com/kuotunyu/local-llm-lifecycle/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/local-llm-lifecycle/actions/workflows/ci.yml)
+![Status: Frozen](https://img.shields.io/badge/Status-Frozen%20%2F%20Portfolio%20Complete-59636e)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.11%2Bcu130-EE4C2C?logo=pytorch&logoColor=white)
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Models%20%26%20Datasets-yellow)](https://huggingface.co/steven0226)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> **Status: Frozen / Portfolio Complete.** `v1.1.0` 是最後一個正式 release；其後只接受保護設定與 release/reference hygiene，不再新增實驗、模型變體、量化或 runtime。外部資產的固定 revision 與 SHA-256 見 [`ARTIFACTS.md`](ARTIFACTS.md)。
 
 本專案實作開源大型語言模型全生命週期 (End-to-End LLM Lifecycle) 工程方法論：從 [DRCD](https://github.com/DRCKnowledgeTeam/DRCD) 繁體中文閱讀理解資料集前處理、Google Colab Pro (NVIDIA L4) 進行 `Qwen/Qwen3-8B` QLoRA 微調、本機環境 (Windows 11 + WSL2 + RTX 4090) 進行 bf16 模型合併、GGUF 轉檔與 Q8_0 / Q4_K_M 量化、部署至 Ollama 與 LM Studio，最終完成評測與發布至 Hugging Face Hub。
 
@@ -138,6 +141,8 @@ flowchart TD
 | GGUF (Q8_0 / Q4_K_M) | [steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF](https://huggingface.co/steven0226/Qwen3-8B-DRCD-zhTW-QA-GGUF) | Apache-2.0 |
 | SFT Dataset | [steven0226/drcd-zhtw-extractive-qa-sft](https://huggingface.co/datasets/steven0226/drcd-zhtw-extractive-qa-sft) | CC BY-SA 4.0 |
 | 訓練監控紀錄 | [W&B Run 頁面](https://wandb.ai/tunyu1/qwen3-drcd-qlora/runs/e8h2wq6x) | N/A |
+
+本 repository 的程式碼與文件採 [MIT](LICENSE)；HF 上的 LoRA/GGUF 權重與衍生 SFT dataset 各自依上表授權，不由 repository 的 MIT 授權取代。凍結 revision 與大型檔案雜湊見 [`ARTIFACTS.md`](ARTIFACTS.md)。
 
 ---
 

@@ -14,6 +14,6 @@ numpy==1.26.4            # 52/54 的 bootstrap 用；刻意不引入 scipy
 huggingface_hub==0.36.2  # 60_publish_hf.py 上傳與 model card
 requests==2.34.2
 
-# 非 Python 相依（版本記錄在 PLAN.md Phase 4）：
+# 非 Python 相依（凍結評測使用的版本）：
 #   llama.cpp build commit a5822222909b785f23ddc74ce3c8f85bd0e38562（轉檔 + 量化 + llama-server）
 #   Ollama / LM Studio（部署驗證，見 deploy/）

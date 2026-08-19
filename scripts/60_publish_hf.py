@@ -1,7 +1,7 @@
 """Phase 6：HF 正式發佈——LoRA adapter repo + GGUF repo 轉正（public）、SFT dataset 轉 public。
 
 跟訓練期的 private checkpoint repo（`qwen3-8b-drcd-qa-ckpt`）是分開的：這支腳本建立/更新的是
-給外部使用者看的正式 repo，命名跟授權見 PLAN.md §3「HF 資產命名」。
+給外部使用者看的正式 repo，命名、授權與資產索引見 README.md 與 ARTIFACTS.md。
 
 三個目標：
   1. LoRA adapter repo（public, Apache-2.0）：從本機 adapter 目錄上傳，寫完整 model card
@@ -180,7 +180,8 @@ print(tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_token
 
 完整專案（Colab QLoRA → 本機合併/量化 → Ollama/LM Studio 部署 → 五組評估 + TMMLU+ 全量
 forgetting check）：<https://github.com/kuotunyu/local-llm-lifecycle>
-（方法論與逐 Phase 實作紀錄見 `PLAN.md`，完整評估報告見 `EVAL_REPORT.md`）。
+（方法論總覽見 [README](https://github.com/kuotunyu/local-llm-lifecycle#readme)，完整評估報告見
+[EVAL_REPORT.md](https://github.com/kuotunyu/local-llm-lifecycle/blob/main/EVAL_REPORT.md)）。
 """
 
 GGUF_CARD = """\
@@ -277,7 +278,8 @@ context length=4096。
 
 完整專案（Colab QLoRA → 本機合併/量化 → Ollama/LM Studio 部署 → 五組評估 + TMMLU+ 全量
 forgetting check）：<https://github.com/kuotunyu/local-llm-lifecycle>
-（方法論與逐 Phase 實作紀錄見 `PLAN.md`，完整評估報告見 `EVAL_REPORT.md`）。
+（方法論總覽見 [README](https://github.com/kuotunyu/local-llm-lifecycle#readme)，完整評估報告見
+[EVAL_REPORT.md](https://github.com/kuotunyu/local-llm-lifecycle/blob/main/EVAL_REPORT.md)）。
 """
 
 
